@@ -54,6 +54,23 @@ TrainWindow(const int x, const int y)
 		pty += 30;
 
 		// camera buttons - in a radio button group
+		Fl_Group* viewGroup = new Fl_Group(600, pty, 195, 20);
+		viewGroup->begin();
+		arcball = new Fl_Button(605, pty, 60, 20, "Arcball");
+		arcball->type(FL_RADIO_BUTTON);		// radio button
+		arcball->value(1);			// turned on
+		arcball->selection_color((Fl_Color)3); // yellow when pressed
+		arcball->callback((Fl_Callback*)damageCB, this);
+		fpv = new Fl_Button(670, pty, 60, 20, "FPV");
+		fpv->type(FL_RADIO_BUTTON);
+		fpv->value(0);
+		fpv->selection_color((Fl_Color)3);
+		fpv->callback((Fl_Callback*)damageCB, this);
+		viewGroup->end();
+
+		pty += 30;
+
+		// camera buttons - in a radio button group
 		Fl_Group* camGroup = new Fl_Group(600,pty,195,20);
 		camGroup->begin();
 		worldCam = new Fl_Button(605, pty, 60, 20, "World");

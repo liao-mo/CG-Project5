@@ -76,6 +76,10 @@ class TrainWindow : public Fl_Double_Window {
 		// utility buttons
 		Fl_Button*			resetButton;
 
+		//arcball or fpv
+		Fl_Button* arcball;
+		Fl_Button* fpv;
+
 		// which viewpoint are we drawing from
 		Fl_Button*			worldCam;
 		Fl_Button*			trainCam;

@@ -7,6 +7,7 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <GL/glu.h>
 #include <GL/glut.h>
 
@@ -47,8 +48,11 @@ int TrainView::handle(int event)
 	// then we're done
 	// note: the arcball only gets the event if we're in world view
 	if (tw->worldCam->value()) {
-		//if (arcball.handle(event))
-		//	return 1;
+		if (tw->arcball->value()) {
+			if (arcball.handle(event))
+				return 1;
+		}
+		
 	}
 
 
@@ -122,7 +126,10 @@ int TrainView::handle(int event)
 			lastX = xpos;
 			lastY = ypos;
 
-			camera.ProcessMouseMovement(xoffset, yoffset);
+			if (tw->fpv->value()) {
+				camera.ProcessMouseMovement(xoffset, yoffset);
+			}
+
 			damage(1);
 		}
 		break;
@@ -415,9 +422,9 @@ void TrainView::draw()
 
 	//drawSubScreenFBO();
 
-	drawTrain();
+	//drawTrain();
 
-	drawTeapot();
+	//drawTeapot();
 	
 	drawWater(tw->waveTypeBrowser->value());
 
@@ -444,21 +451,30 @@ setProjection()
 	glUseProgram(0);
 	// Compute the aspect ratio (we'll need it)
 	float aspect = static_cast<float>(w()) / static_cast<float>(h());
+	projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, (float)NEAR, (float)FAR);
 
 	// Check whether we use the world camp
 	if (tw->worldCam->value()) {
-		arcball.setProjection(false);
+		if (tw->arcball->value()) {
+			arcball.setProjection(false);
+			float view_temp[16];
+			glGetFloatv(GL_MODELVIEW_MATRIX, view_temp);
+			viewMatrix = glm::make_mat4(view_temp);
+		}
 
-		updata_camera();
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
+		if (tw->fpv->value()) {
+			updata_camera();
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
 
-		glm::mat4 projection_matrix = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, (float)NEAR, (float)FAR);
-		glMultMatrixf(&projection_matrix[0][0]);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glm::mat4 view_matrix = camera.GetViewMatrix();
-		glMultMatrixf(&view_matrix[0][0]);
+			
+			glMultMatrixf(&projectionMatrix[0][0]);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			viewMatrix = camera.GetViewMatrix();
+			glMultMatrixf(&viewMatrix[0][0]);
+		}
+		
 	}
 	// Or we use the top cam
 	else if (tw->topCam->value()) {
@@ -603,13 +619,9 @@ void TrainView::setUBO()
 	float wdt = this->pixel_w();
 	float hgt = this->pixel_h();
 
-	glm::mat4 view_matrix  = camera.GetViewMatrix();
-
-	glm::mat4 projection_matrix = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, (float)NEAR, (float)FAR);
-
 	glBindBuffer(GL_UNIFORM_BUFFER, this->commom_matrices->ubo);
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), &projection_matrix[0][0]);
-	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), &view_matrix[0][0]);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), &projectionMatrix[0][0]);
+	glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), &viewMatrix[0][0]);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
@@ -620,25 +632,26 @@ void TrainView::updateTimer() {
 }
 
 void TrainView::updata_camera() {
-	if (k_pressed) {
-		if (k == 'w') {
-			camera.ProcessKeyboard(FORWARD, delta_t);
-			damage(1);
-		}
-		if (k == 's') {
-			camera.ProcessKeyboard(BACKWARD, delta_t);
-			damage(1);
-		}
-		if (k == 'a') {
-			camera.ProcessKeyboard(LEFT, delta_t);
-			damage(1);
-		}
-		if (k == 'd') {
-			camera.ProcessKeyboard(RIGHT, delta_t);
-			damage(1);
+	if (tw->fpv->value()) {
+		if (k_pressed) {
+			if (k == 'w') {
+				camera.ProcessKeyboard(FORWARD, delta_t);
+				damage(1);
+			}
+			if (k == 's') {
+				camera.ProcessKeyboard(BACKWARD, delta_t);
+				damage(1);
+			}
+			if (k == 'a') {
+				camera.ProcessKeyboard(LEFT, delta_t);
+				damage(1);
+			}
+			if (k == 'd') {
+				camera.ProcessKeyboard(RIGHT, delta_t);
+				damage(1);
+			}
 		}
 	}
-	
 	//cout << camera.Position.x << " " << camera.Position.y << " " << camera.Position.z << endl;
 }
 
@@ -762,14 +775,12 @@ void TrainView::drawTeapot() {
 }
 
 void TrainView::drawWater(int mode) {
-	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, (float)NEAR, (float)FAR);
-	glm::mat4 view = camera.GetViewMatrix();
 	glm::mat4 model = glm::mat4(1.0);
 	model = glm::translate(model, glm::vec3(0, 10, 0));
 	model = glm::scale(model, glm::vec3(10,1,10));
 
 	waterMesh->setEyePos(camera.Position);
-	waterMesh->setMVP(model, view, projection);
+	waterMesh->setMVP(model, viewMatrix, projectionMatrix);
 	waterMesh->addTime(delta_t);
 
 	waterMesh->amplitude_coefficient = tw->waterAmplitude->value();
@@ -801,11 +812,9 @@ void TrainView::drawWater(int mode) {
 }
 
 void TrainView::drawSkyBox() {
-	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, (float)NEAR, (float)FAR);
-	glm::mat4 view = camera.GetViewMatrix();
 	glm::mat4 model = glm::mat4(1.0);
 
-	skyBox->setMVP(model, view, projection);
+	skyBox->setMVP(model, viewMatrix, projectionMatrix);
 	skyBox->draw();
 
 	glUseProgram(0);
