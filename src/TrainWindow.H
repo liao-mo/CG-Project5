@@ -104,13 +104,24 @@ class TrainWindow : public Fl_Double_Window {
 
 		//wave type browser
 		Fl_Browser* waveTypeBrowser;
+		// the type of the track (use its value to determine)
+		Fl_Browser* trackBrowser;
 
-		//do pixelation
-		Fl_Button* pixelation;
+		////do pixelation
+		//Fl_Button* pixelation;
 
-		//do offset
-		Fl_Button* offset;
+		////do offset
+		//Fl_Button* offset;
 
-		//do grayscale
-		Fl_Button* grayscale;
+		////do grayscale
+		//Fl_Button* grayscale;
+
+		Fl_Button* envLight; // do we want environment lighting?
+		Fl_Button* physics; // do we want physics?
+
+
+		// add a car
+		Fl_Button* add_car;
+		// delete a car
+		Fl_Button* delete_car;
 };

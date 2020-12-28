@@ -16,7 +16,7 @@
 //========================================================================
 TrainWindow::
 TrainWindow(const int x, const int y) 
-	: Fl_Double_Window(x,y,800,600,"Train and Roller Coaster")
+	: Fl_Double_Window(x,y,800,700,"Train and Roller Coaster")
 //========================================================================
 {
 	// make all of the widgets
@@ -24,13 +24,13 @@ TrainWindow(const int x, const int y)
 	{
 		int pty=5;			// where the last widgets were drawn
 
-		trainView = new TrainView(5,5,590,590);
+		trainView = new TrainView(5,5,590,690);
 		trainView->tw = this;
 		trainView->m_pTrack = &m_Track;
 		this->resizable(trainView);
 
 		// to make resizing work better, put all the widgets in a group
-		widgets = new Fl_Group(600,5,190,590);
+		widgets = new Fl_Group(600,5,190,690);
 		widgets->begin();
 
 		runButton = new Fl_Button(605,pty,60,20,"Run");
@@ -169,25 +169,51 @@ TrainWindow(const int x, const int y)
 		waveTypeBrowser->callback((Fl_Callback*)damageCB, this);
 		waveTypeBrowser->add("Sine wave");
 		waveTypeBrowser->add("Height map");
-		waveTypeBrowser->add("interactive");
 		waveTypeBrowser->select(1);
 
-		pty += 110;
+		pty += 100;
 
-		pixelation = new Fl_Button(605, pty, 80, 20, "Pixelation");
-		togglify(pixelation);
+		trackBrowser = new Fl_Browser(605, pty, 120, 75, "track Type");
+		trackBrowser->type(2);		// select
+		trackBrowser->callback((Fl_Callback*)damageCB, this);
+		trackBrowser->add("Single");
+		trackBrowser->add("Double Flat");
+		trackBrowser->add("Double 3D");
+		trackBrowser->select(2);
+
+		pty += 100;
+
+		envLight = new Fl_Button(605, pty, 100, 20, "Lighting");
+		togglify(envLight, 1);
 
 		pty += 30;
 
-		offset = new Fl_Button(605, pty, 80, 20, "Offset");
-		togglify(offset);
+		physics = new Fl_Button(605, pty, 100, 20, "Physics");
+		togglify(physics, 1);
 
 		pty += 30;
 
-		grayscale = new Fl_Button(605, pty, 80, 20, "Grayscale");
-		togglify(grayscale);
+		//add a car
+		add_car = new Fl_Button(605, pty, 80, 20, "Add car");
+		add_car->callback((Fl_Callback*)addCar, this);
+		//delete a car
+		delete_car = new Fl_Button(700, pty, 80, 20, "Delete car");
+		delete_car->callback((Fl_Callback*)delCar, this);
 
-		pty += 30;
+		//pixelation = new Fl_Button(605, pty, 80, 20, "Pixelation");
+		//togglify(pixelation);
+
+		//pty += 30;
+
+		//offset = new Fl_Button(605, pty, 80, 20, "Offset");
+		//togglify(offset);
+
+		//pty += 30;
+
+		//grayscale = new Fl_Button(605, pty, 80, 20, "Grayscale");
+		//togglify(grayscale);
+
+		//pty += 30;
 
 		// TODO: add widgets for all of your fancier features here
 

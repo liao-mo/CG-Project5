@@ -13,6 +13,12 @@
 #include "SkyBox.h"
 #include "FrameBuffer.h"
 
+// this uses the old ArcBall Code
+#include "Utilities/ArcBallCam.H"
+#include "Utilities/Pnt3f.H"
+#include <vector>
+#include <chrono>
+
 
 #define SCR_WIDTH 800
 #define SCR_HEIGHT 600
@@ -172,4 +178,21 @@ class TrainView : public Fl_Gl_Window
 		//view projection matrices
 		glm::mat4 viewMatrix;
 		glm::mat4 projectionMatrix;
+
+
+
+		unsigned int num_of_car;
+
+		//find 4 control point around current point
+		std::vector<Pnt3f> find_Cpoints(int currentPoint);
+		//find 4 orient vector around current point
+		std::vector<Pnt3f> find_orient_vectors(int currentPoint);
+
+		std::vector<float> t_param;
+		std::vector<float> arc_length;
+		std::vector<float> accumulate_length;
+		std::vector<float> speeds;
+		std::vector<glm::vec3> all_qt;
+		std::vector<glm::vec3> all_orient;
+		std::vector<glm::vec3> all_forward;
 };

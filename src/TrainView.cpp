@@ -390,11 +390,6 @@ void TrainView::draw()
 	glDisable(GL_LIGHTING);
 	//drawFloor(200,10);
 
-
-	//*********************************************************************
-	// now draw the object and we need to do it twice
-	// once for real, and then once for shadows
-	//*********************************************************************
 	//glEnable(GL_LIGHTING);
 	setupObjects();
 
@@ -406,6 +401,8 @@ void TrainView::draw()
 	//	//drawStuff(true);
 	//	unsetupShadows();
 	//}
+
+	//use shader===========================================================================================================
 
 	setUBO();
 	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
@@ -1131,9 +1128,9 @@ void TrainView::drawMainScreen() {
 	mainScreen_shader->setFloat("rt_h", h());
 	mainScreen_shader->setFloat("pixel_w", 10.0);
 	mainScreen_shader->setFloat("pixel_h", 10.0);
-	mainScreen_shader->setBool("doPixelation", tw->pixelation->value());
-	mainScreen_shader->setBool("doOffset", tw->offset->value());
-	mainScreen_shader->setBool("doGrayscale", tw->grayscale->value());
+	//mainScreen_shader->setBool("doPixelation", tw->pixelation->value());
+	//mainScreen_shader->setBool("doOffset", tw->offset->value());
+	//mainScreen_shader->setBool("doGrayscale", tw->grayscale->value());
 	
 
 	glBindVertexArray(mainScreenVAO->vao);
