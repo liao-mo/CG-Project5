@@ -10,9 +10,9 @@ WaterMesh::WaterMesh(glm::vec3 pos) :
 	position(pos),
 	amplitude_coefficient(1.0)
 {
-	grid = new Model(FileSystem::getPath("resources/objects/grid/grid.obj"));
+	//grid = new Model(FileSystem::getPath("resources/objects/grid/grid.obj"));
 	//Debug: low polygons for fast loading
-	//grid = new Model(FileSystem::getPath("resources/objects/grid/low_grid.obj"));
+	grid = new Model(FileSystem::getPath("resources/objects/grid/low_grid.obj"));
 	sinWave_shader = new Shader("../src/shaders/water_surface.vert", "../src/shaders/water_surface.frag");
 	heightMap_shader = new Shader("../src/shaders/water_heightMap.vert", "../src/shaders/water_heightMap.frag");
 	color_uv_shader = new Shader("../src/shaders/color_uv.vert", "../src/shaders/color_uv.frag");
@@ -85,8 +85,6 @@ void WaterMesh::draw(int mode) {
 void WaterMesh::drawSineWave() {
 	sinWave_shader->use();
 	sinWave_shader->setMat4("model", modelMatrix);
-	sinWave_shader->setMat4("view", viewMatrix);
-	sinWave_shader->setMat4("projection", projectionMatrix);
 
 	sinWave_shader->setFloat("time", currentTime);
 	sinWave_shader->setInt("numWaves", waveCounter);
@@ -127,8 +125,6 @@ void WaterMesh::drawSineWave() {
 void WaterMesh::drawHeightMap() {
 	heightMap_shader->use();
 	heightMap_shader->setMat4("model", modelMatrix);
-	heightMap_shader->setMat4("view", viewMatrix);
-	heightMap_shader->setMat4("projection", projectionMatrix);
 	heightMap_shader->setInt("heightMap", 1);
 	heightMap_shader->setInt("interactive", 2);
 	heightMap_shader->setFloat("amplitude", amplitude_coefficient);
@@ -166,8 +162,6 @@ void WaterMesh::drawHeightMap() {
 void WaterMesh::drawInteractiveWave() {
 	heightMap_shader->use();
 	heightMap_shader->setMat4("model", modelMatrix);
-	heightMap_shader->setMat4("view", viewMatrix);
-	heightMap_shader->setMat4("projection", projectionMatrix);
 	heightMap_shader->setInt("heightMap", 1);
 	heightMap_shader->setInt("interactive", 2);
 	heightMap_shader->setFloat("amplitude", amplitude_coefficient);
@@ -226,7 +220,5 @@ void WaterMesh::loadHeightMaps() {
 void WaterMesh::drawColorUV() {
 	color_uv_shader->use();
 	color_uv_shader->setMat4("model", modelMatrix);
-	color_uv_shader->setMat4("view", viewMatrix);
-	color_uv_shader->setMat4("projection", projectionMatrix);
 	grid->Draw(*color_uv_shader);
 }

@@ -168,4 +168,8 @@ class TrainView : public Fl_Gl_Window
 		int ks;
 		bool k_pressed;
 		bool firstDraw = true;
+
+		//view projection matrices
+		glm::mat4 viewMatrix;
+		glm::mat4 projectionMatrix;
 };

@@ -353,6 +353,7 @@ void TrainView::draw()
 	// prepare for projection
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
+	
 	setProjection();		// put the code to set up matrices here
 
 	// enable the lighting
@@ -390,14 +391,14 @@ void TrainView::draw()
 	//glEnable(GL_LIGHTING);
 	setupObjects();
 
-	//drawStuff();
+	drawStuff();
 
 	// this time drawing is for shadows (except for top view)
-	if (!tw->topCam->value()) {
-		setupShadows();
-		//drawStuff(true);
-		unsetupShadows();
-	}
+	//if (!tw->topCam->value()) {
+	//	setupShadows();
+	//	//drawStuff(true);
+	//	unsetupShadows();
+	//}
 
 	setUBO();
 	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
@@ -408,24 +409,24 @@ void TrainView::draw()
 	//drawGround();
 
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	glViewport(0, 0, 1920,1080);
+	//glViewport(0, 0, 1920,1080);
 
-	drawMainFBO();
+	//drawMainFBO();
 
 	//drawSubScreenFBO();
 
-	//drawTrain();
+	drawTrain();
 
-	//drawTeapot();
-	//
-	//drawWater();
+	drawTeapot();
+	
+	drawWater(tw->waveTypeBrowser->value());
 
-	//drawSkyBox();
+	drawSkyBox();
 
 	//draw main FBO to the whole screen
-	drawMainScreen();
+	//drawMainScreen();
 
-	drawSubScreen();
+	//drawSubScreen();
 
 	//unbind VAO
 	glBindVertexArray(0);
@@ -440,13 +441,24 @@ void TrainView::draw()
 void TrainView::
 setProjection()
 {
+	glUseProgram(0);
 	// Compute the aspect ratio (we'll need it)
 	float aspect = static_cast<float>(w()) / static_cast<float>(h());
 
 	// Check whether we use the world camp
 	if (tw->worldCam->value()) {
-		//arcball.setProjection(false);
+		arcball.setProjection(false);
+
 		updata_camera();
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+
+		glm::mat4 projection_matrix = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, (float)NEAR, (float)FAR);
+		glMultMatrixf(&projection_matrix[0][0]);
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		glm::mat4 view_matrix = camera.GetViewMatrix();
+		glMultMatrixf(&view_matrix[0][0]);
 	}
 	// Or we use the top cam
 	else if (tw->topCam->value()) {
@@ -522,67 +534,68 @@ void TrainView::
 doPick()
 //========================================================================
 {
-	//// since we'll need to do some GL stuff so we make this window as 
-	//// active window
-	//make_current();		
+	glUseProgram(0);
+	// since we'll need to do some GL stuff so we make this window as 
+	// active window
+	make_current();
 
-	//// where is the mouse?
-	//int mx = Fl::event_x(); 
-	//int my = Fl::event_y();
+	// where is the mouse?
+	int mx = Fl::event_x();
+	int my = Fl::event_y();
 
-	//// get the viewport - most reliable way to turn mouse coords into GL coords
-	//int viewport[4];
-	//glGetIntegerv(GL_VIEWPORT, viewport);
+	// get the viewport - most reliable way to turn mouse coords into GL coords
+	int viewport[4];
+	glGetIntegerv(GL_VIEWPORT, viewport);
 
-	//// Set up the pick matrix on the stack - remember, FlTk is
-	//// upside down!
-	//glMatrixMode(GL_PROJECTION);
-	//glLoadIdentity ();
-	//gluPickMatrix((double)mx, (double)(viewport[3]-my), 
-	//					5, 5, viewport);
+	// Set up the pick matrix on the stack - remember, FlTk is
+	// upside down!
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity ();
+	gluPickMatrix((double)mx, (double)(viewport[3]-my), 
+						5, 5, viewport);
 
-	//// now set up the projection
-	//setProjection();
+	// now set up the projection
+	setProjection();
 
-	//// now draw the objects - but really only see what we hit
-	//GLuint buf[100];
-	//glSelectBuffer(100,buf);
-	//glRenderMode(GL_SELECT);
-	//glInitNames();
-	//glPushName(0);
+	// now draw the objects - but really only see what we hit
+	GLuint buf[100];
+	glSelectBuffer(100,buf);
+	glRenderMode(GL_SELECT);
+	glInitNames();
+	glPushName(0);
 
-	//// draw the cubes, loading the names as we go
-	//for(size_t i=0; i<m_pTrack->points.size(); ++i) {
-	//	glLoadName((GLuint) (i+1));
-	//	m_pTrack->points[i].draw();
-	//}
-
-	//// go back to drawing mode, and see how picking did
-	//int hits = glRenderMode(GL_RENDER);
-	//if (hits) {
-	//	// warning; this just grabs the first object hit - if there
-	//	// are multiple objects, you really want to pick the closest
-	//	// one - see the OpenGL manual 
-	//	// remember: we load names that are one more than the index
-	//	selectedCube = buf[3]-1;
-	//} else // nothing hit, nothing selected
-	//	selectedCube = -1;
-
-	//printf("Selected Cube %d\n",selectedCube);
-
-	drawColorUVFBO();
-	colorUVFBO->bind();
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glm::vec3 uv;
-	glReadPixels(Fl::event_x(), h() - Fl::event_y(), 1, 1, GL_RGB, GL_FLOAT, &uv[0]);
-
-	glReadBuffer(GL_NONE);
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-	colorUVFBO->unbind();
-	if (uv.b != 1.0) {
-		cout << "uv.r = " << uv.r << " uv.g = " << uv.g << endl;
-		updateInteractiveHeightMapFBO(1, glm::vec2(uv.r, uv.g));
+	// draw the cubes, loading the names as we go
+	for(size_t i=0; i<m_pTrack->points.size(); ++i) {
+		glLoadName((GLuint) (i+1));
+		m_pTrack->points[i].draw();
 	}
+
+	// go back to drawing mode, and see how picking did
+	int hits = glRenderMode(GL_RENDER);
+	if (hits) {
+		// warning; this just grabs the first object hit - if there
+		// are multiple objects, you really want to pick the closest
+		// one - see the OpenGL manual 
+		// remember: we load names that are one more than the index
+		selectedCube = buf[3]-1;
+	} else // nothing hit, nothing selected
+		selectedCube = -1;
+
+	printf("Selected Cube %d\n",selectedCube);
+
+	//drawColorUVFBO();
+	//colorUVFBO->bind();
+	//glReadBuffer(GL_COLOR_ATTACHMENT0);
+	//glm::vec3 uv;
+	//glReadPixels(Fl::event_x(), h() - Fl::event_y(), 1, 1, GL_RGB, GL_FLOAT, &uv[0]);
+
+	//glReadBuffer(GL_NONE);
+	//glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+	//colorUVFBO->unbind();
+	//if (uv.b != 1.0) {
+	//	cout << "uv.r = " << uv.r << " uv.g = " << uv.g << endl;
+	//	updateInteractiveHeightMapFBO(1, glm::vec2(uv.r, uv.g));
+	//}
 }
 
 void TrainView::setUBO()
@@ -590,14 +603,9 @@ void TrainView::setUBO()
 	float wdt = this->pixel_w();
 	float hgt = this->pixel_h();
 
-	glm::mat4 view_matrix;
-	glGetFloatv(GL_MODELVIEW_MATRIX, &view_matrix[0][0]);
-	//HMatrix view_matrix; 
-	//this->arcball.getMatrix(view_matrix);
+	glm::mat4 view_matrix  = camera.GetViewMatrix();
 
-	glm::mat4 projection_matrix;
-	glGetFloatv(GL_PROJECTION_MATRIX, &projection_matrix[0][0]);
-	//projection_matrix = glm::perspective(glm::radians(this->arcball.getFoV()), (GLfloat)wdt / (GLfloat)hgt, 0.01f, 1000.0f);
+	glm::mat4 projection_matrix = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, (float)NEAR, (float)FAR);
 
 	glBindBuffer(GL_UNIFORM_BUFFER, this->commom_matrices->ubo);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), &projection_matrix[0][0]);
@@ -646,8 +654,7 @@ void TrainView::update_light_shaders() {
 		current_light_shader = spot_light_shader;
 	}
 
-	glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, (float)NEAR, (float)FAR);
-	glm::mat4 view = camera.GetViewMatrix();
+
 	glm::mat4 model = glm::mat4(1.0f);
 
 	//directional light
@@ -662,10 +669,6 @@ void TrainView::update_light_shaders() {
 		// material properties
 		directional_light_shader->setFloat("material.shininess", 32.0f);
 		// view/projection transformations
-		projection = glm::perspective(glm::radians(camera.Zoom), (float)w() / (float)h(), (float)NEAR, (float)FAR);
-		view = camera.GetViewMatrix();
-		directional_light_shader->setMat4("projection", projection);
-		directional_light_shader->setMat4("view", view);
 		// world transformation
 		//model = glm::mat4(1.0f);
 		//model = glm::scale(model, glm::vec3(5.0, 5.0, 5.0));
@@ -689,12 +692,6 @@ void TrainView::update_light_shaders() {
 
 		// material properties
 		point_light_shader->setFloat("material.shininess", 32.0f);
-
-		// view/projection transformations
-		projection = glm::perspective(glm::radians(camera.Zoom), (float)w() / (float)h(), (float)NEAR, (float)FAR);
-		view = camera.GetViewMatrix();
-		point_light_shader->setMat4("projection", projection);
-		point_light_shader->setMat4("view", view);
 
 		// world transformation
 		//model = glm::mat4(1.0f);
@@ -720,11 +717,7 @@ void TrainView::update_light_shaders() {
 		spot_light_shader->setFloat("light.quadratic", 0.01f);
 		// material properties
 		spot_light_shader->setFloat("material.shininess", 32.0f);
-		// view/projection transformations
-		projection = glm::perspective(glm::radians(camera.Zoom), (float)w() / (float)h(), (float)NEAR, (float)FAR);
-		view = camera.GetViewMatrix();
-		spot_light_shader->setMat4("projection", projection);
-		spot_light_shader->setMat4("view", view);
+
 		// world transformation
 		//model = glm::mat4(1.0f);
 		//model = glm::scale(model, glm::vec3(5.0, 5.0, 5.0));
@@ -804,6 +797,7 @@ void TrainView::drawWater(int mode) {
 	}
 
 	waterMesh->draw(mode);
+	glUseProgram(0);
 }
 
 void TrainView::drawSkyBox() {
@@ -813,6 +807,8 @@ void TrainView::drawSkyBox() {
 
 	skyBox->setMVP(model, view, projection);
 	skyBox->draw();
+
+	glUseProgram(0);
 }
 
 void TrainView::loadShaders() {
