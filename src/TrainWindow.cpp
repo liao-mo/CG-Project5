@@ -16,7 +16,7 @@
 //========================================================================
 TrainWindow::
 TrainWindow(const int x, const int y) 
-	: Fl_Double_Window(x,y,800,700,"Train and Roller Coaster")
+	: Fl_Double_Window(x,y,850,900,"Train and Roller Coaster")
 //========================================================================
 {
 	// make all of the widgets
@@ -24,13 +24,13 @@ TrainWindow(const int x, const int y)
 	{
 		int pty=5;			// where the last widgets were drawn
 
-		trainView = new TrainView(5,5,590,690);
+		trainView = new TrainView(5,5,590,890);
 		trainView->tw = this;
 		trainView->m_pTrack = &m_Track;
 		this->resizable(trainView);
 
 		// to make resizing work better, put all the widgets in a group
-		widgets = new Fl_Group(600,5,190,690);
+		widgets = new Fl_Group(600,5,190,790);
 		widgets->begin();
 
 		runButton = new Fl_Button(605,pty,60,20,"Run");
@@ -164,6 +164,25 @@ TrainWindow(const int x, const int y)
 
 		pty += 30;
 
+		envLight = new Fl_Button(605, pty, 100, 20, "Lighting");
+		togglify(envLight, 1);
+
+		pty += 30;
+
+		physics = new Fl_Button(605, pty, 100, 20, "Physics");
+		togglify(physics, 1);
+
+		pty += 30;
+
+		//add a car
+		add_car = new Fl_Button(605, pty, 80, 20, "Add car");
+		add_car->callback((Fl_Callback*)addCar, this);
+		//delete a car
+		delete_car = new Fl_Button(700, pty, 80, 20, "Delete car");
+		delete_car->callback((Fl_Callback*)delCar, this);
+
+		pty += 30;
+
 		waveTypeBrowser = new Fl_Browser(605, pty, 120, 75, "wave Type");
 		waveTypeBrowser->type(1);		// select
 		waveTypeBrowser->callback((Fl_Callback*)damageCB, this);
@@ -183,22 +202,7 @@ TrainWindow(const int x, const int y)
 
 		pty += 100;
 
-		envLight = new Fl_Button(605, pty, 100, 20, "Lighting");
-		togglify(envLight, 1);
 
-		pty += 30;
-
-		physics = new Fl_Button(605, pty, 100, 20, "Physics");
-		togglify(physics, 1);
-
-		pty += 30;
-
-		//add a car
-		add_car = new Fl_Button(605, pty, 80, 20, "Add car");
-		add_car->callback((Fl_Callback*)addCar, this);
-		//delete a car
-		delete_car = new Fl_Button(700, pty, 80, 20, "Delete car");
-		delete_car->callback((Fl_Callback*)delCar, this);
 
 		//pixelation = new Fl_Button(605, pty, 80, 20, "Pixelation");
 		//togglify(pixelation);
@@ -269,23 +273,34 @@ advanceTrain(float dir)
 	//#####################################################################
 	// TODO: make this work for your train
 	//#####################################################################
+	float speed_val0 = dir * this->speed->value() / 100.0;
+	float speed_val1 = dir * this->speed->value();
 
-	
+	if (physics->value() == 1) {
+		size_t i;
+		i = trainView->C_length_index();
+		speed_val1 = speed_val1 * trainView->speeds[i];
+	}
+#ifdef DEBUG
+	//cout << "s: " << speed_val1 << endl;
+	//speed_val = 0.001;
+#endif // DEBUG
 
+	if (arcLength->value() == 1) {
+		trainView->m_pTrack->C_length += speed_val1;
+		if (trainView->m_pTrack->C_length >= trainView->accumulate_length.back()) {
+			trainView->m_pTrack->C_length = 0;
+			trainView->m_pTrack->trainU = 0;
+	}
+		trainView->match_length();
 
-#ifdef EXAMPLE_SOLUTION
-	// note - we give a little bit more example code here than normal,
-	// so you can see how this works
-
-	if (arcLength->value()) {
-		float vel = ew.physics->value() ? physicsSpeed(this) : dir * (float)speed->value();
-		world.trainU += arclenVtoV(world.trainU, vel, this);
-	} else {
-		world.trainU +=  dir * ((float)speed->value() * .1f);
+}
+	else {
+		trainView->m_pTrack->trainU += speed_val0;
+		trainView->match_trainU();
 	}
 
-	float nct = static_cast<float>(world.points.size());
-	if (world.trainU > nct) world.trainU -= nct;
-	if (world.trainU < 0) world.trainU += nct;
-#endif
+	if (trainView->m_pTrack->trainU >= trainView->m_pTrack->points.size() - 0.01) {
+		trainView->m_pTrack->trainU = 0;
+	}
 }

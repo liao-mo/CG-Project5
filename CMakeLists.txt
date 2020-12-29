@@ -61,6 +61,7 @@ add_executable(WaterSurface
     ${SRC_DIR}WaterMesh.h
     ${SRC_DIR}SkyBox.h
     ${SRC_DIR}FrameBuffer.h
+    ${SRC_DIR}My_functions.H
 
     ${SRC_DIR}main.cpp
     ${SRC_DIR}CallBacks.cpp
@@ -87,7 +88,12 @@ add_library(Utilities
     ${SRC_DIR}Utilities/Pnt3f.h
     ${SRC_DIR}Utilities/ArcBallCam.cpp
     ${SRC_DIR}Utilities/3DUtils.cpp
-    ${SRC_DIR}Utilities/Pnt3f.cpp)
+    ${SRC_DIR}Utilities/Pnt3f.cpp
+    ${SRC_DIR}Utilities/objloader.hpp
+    ${SRC_DIR}Utilities/objloader.cpp
+    ${SRC_DIR}Utilities/Matrices.h
+    ${SRC_DIR}Utilities/Matrices.cpp
+    ${SRC_DIR}Utilities/Vectors.h)
 
 target_link_libraries(WaterSurface 
     debug ${LIB_DIR}Debug/fltk_formsd.lib      optimized ${LIB_DIR}Release/fltk_forms.lib

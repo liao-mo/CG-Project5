@@ -24,6 +24,8 @@
 #define SCR_HEIGHT 600
 #define NEAR 0.01
 #define FAR 5000.0
+#define DIVIDE_LINE 100
+
 const int TEXTURE_WIDTH = 1920;  // NOTE: texture size cannot be larger than
 const int TEXTURE_HEIGHT = 1080;  // the rendering window size in non-FBO mode
 
@@ -63,6 +65,24 @@ class TrainView : public Fl_Gl_Window
 		// we're drawing shadows (no colors, for example)
 		void drawStuff(bool doingShadows=false);
 
+		//my function that draws the train
+		void draw_train(bool doingShadows);
+
+		//my function that draws the car
+		void draw_car(bool doingShadows, float backward_offset);
+
+		//my function that draws the track
+		void draw_track(bool doingShadows);
+
+		//my function that draws the sleeper
+		void draw_sleeper(bool doingShadows);
+
+		//my function that draws my ground
+		void draw_ground();
+
+		//my function that draws my env models
+		void draw_env_model(bool doingShadows);
+
 		// setup the projection - assuming that the projection stack has been
 		// cleared for you
 		void setProjection();
@@ -76,12 +96,34 @@ class TrainView : public Fl_Gl_Window
 		//set ubo
 		void setUBO();
 
+		//setupt train's head light
+		void set_train_light();
+
+		//update track data 
+		void update_arcLengh();
+
+		//use current length to find parameter t
+		float length_to_t(float length);
+
+		//use current length to find current index
+		size_t length_to_index(float length);
+
+		//find current index by C_length
+		size_t C_length_index();
+
+		//find current index by trainU
+		size_t trainU_index();
+
+		//match current length and trainU
+		void match_length();
+
+		//match current trainU to length 
+		void match_trainU();
+
 		//draw object functions
 		//draw ground
 		void drawGround();
 
-		//draw train
-		void drawTrain();
 		
 	public:
 		ArcBallCam		arcball;			// keep an ArcBall for the UI
@@ -180,7 +222,12 @@ class TrainView : public Fl_Gl_Window
 		glm::mat4 projectionMatrix;
 
 
-
+		Model* my_train = nullptr;			//my train model
+		Model* my_sleeper = nullptr;			//my train model
+		Model* my_track = nullptr;			//my train model
+		Model* my_car = nullptr;				//my car model
+		Model* my_ground = nullptr;				//my car model
+		std::vector<Model*> scene_models; //all other static models
 		unsigned int num_of_car;
 
 		//find 4 control point around current point

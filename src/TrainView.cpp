@@ -5,15 +5,27 @@
 #include <windows.h>
 //#include "GL/gl.h"
 #include <glad/glad.h>
+
+// Include GLM
 #include <glm/glm.hpp>
-#include <glm/gtx/transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/norm.hpp>
+
 #include <GL/glu.h>
 #include <GL/glut.h>
 
 #include "TrainView.H"
 #include "TrainWindow.H"
 #include "Utilities/3DUtils.H"
+
+#include "Utilities/Matrices.h"
+#include "Utilities/objloader.hpp"
+#include "My_functions.H"
+#include <vector> 
 
 
 
@@ -537,12 +549,6 @@ void TrainView::drawStuff(bool doingShadows)
 
 }
 
-// * this tries to see which control point is under the mouse
-//	  (for when the mouse is clicked)
-//		it uses OpenGL picking - which is always a trick
-// TODO: 
-//		if you want to pick things other than control points, or you
-//		changed how control points are drawn, you might need to change this
 void TrainView::
 doPick()
 //========================================================================
@@ -747,17 +753,6 @@ void TrainView::drawGround() {
 	glBindVertexArray(this->plane->vao);
 	glDrawElements(GL_TRIANGLES, this->plane->element_amount, GL_UNSIGNED_INT, 0);
 	ground_texture->unbind(0);
-}
-
-void TrainView::drawTrain() {
-	
-	// world transformation
-	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(0, 100, 0));
-	model = glm::scale(model, glm::vec3(10, 10, 10));
-	current_light_shader->setMat4("model", model);
-
-	sci_fi_train->Draw(*current_light_shader);
 }
 
 void TrainView::drawTeapot() {
@@ -996,7 +991,6 @@ void TrainView::drawMainFBO() {
 	// clear buffer
 	glClearColor(1, 1, 1, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawTrain();
 
 	drawTeapot();
 
@@ -1024,7 +1018,6 @@ void TrainView::drawSubScreenFBO() {
 	// clear buffer
 	glClearColor(1, 1, 1, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	drawTrain();
 
 	drawTeapot();
 
@@ -1147,4 +1140,196 @@ void TrainView::drawSubScreen() {
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, interactiveHeightMapFBO1->getColorId());
 	glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+//find 4 control point around current point
+std::vector<Pnt3f> TrainView::find_Cpoints(int currentPoint) {
+#ifdef DEBUG
+
+#endif // DEBUG
+
+	Pnt3f cp_pos_p0;
+	if (currentPoint == 0) {
+		cp_pos_p0 = m_pTrack->points[(m_pTrack->points.size() - 1)].pos;
+		//cout << "cp0: " << m_pTrack->points.size() - 1;
+	}
+	else {
+		cp_pos_p0 = m_pTrack->points[(currentPoint - 1)].pos;
+		//cout << "cp0: " << currentPoint - 1;
+	}
+	Pnt3f cp_pos_p1 = m_pTrack->points[currentPoint].pos;
+	//cout << " cp1: " << currentPoint;
+	Pnt3f cp_pos_p2 = m_pTrack->points[(currentPoint + 1) % m_pTrack->points.size()].pos;
+	//cout << " cp2: " << (currentPoint + 1) % m_pTrack->points.size();
+	Pnt3f cp_pos_p3 = m_pTrack->points[(currentPoint + 2) % m_pTrack->points.size()].pos;
+	//cout << " cp3: " << (currentPoint + 2) % m_pTrack->points.size();
+	//cout << endl;
+
+
+
+	std::vector<Pnt3f> output = { cp_pos_p0, cp_pos_p1, cp_pos_p2, cp_pos_p3 };
+	return output;
+
+}
+
+//find 4 orient vector around current point
+std::vector<Pnt3f> TrainView::find_orient_vectors(int currentPoint) {
+#ifdef DEBUG
+
+#endif // DEBUG
+
+	Pnt3f orient0;
+	if (currentPoint == 0) {
+		orient0 = m_pTrack->points[(m_pTrack->points.size() - 1)].orient;
+	}
+	else {
+		orient0 = m_pTrack->points[(currentPoint - 1)].orient;
+	}
+	Pnt3f orient1 = m_pTrack->points[currentPoint].orient;
+	Pnt3f orient2 = m_pTrack->points[(currentPoint + 1) % m_pTrack->points.size()].orient;
+	Pnt3f orient3 = m_pTrack->points[(currentPoint + 2) % m_pTrack->points.size()].orient;
+
+	std::vector<Pnt3f> output = { orient0, orient1, orient2, orient3 };
+	return output;
+
+}
+
+//update track data 
+void TrainView::update_arcLengh() {
+	size_t size = DIVIDE_LINE * m_pTrack->points.size();
+
+	glm::vec3 default_vec3(0, 0, 0);
+	t_param.assign(size, 0);
+	arc_length.assign(size, 0);
+	accumulate_length.assign(size, 0);
+	speeds.assign(size, 0);
+	all_qt.assign(size, default_vec3);
+	all_orient.assign(size, default_vec3);
+	all_forward.assign(size, default_vec3);
+
+	//initialize t_param
+	for (int i = 0; i < size; ++i) {
+		int fraction = i % 100;
+		t_param[i] = float(fraction) / float(DIVIDE_LINE);
+	}
+
+	//setup arcLength and all qt, orient and forward
+	for (int i = 0; i < m_pTrack->points.size(); ++i) {
+		Pnt3f cp_orient_p0 = m_pTrack->points[i].orient;
+		Pnt3f cp_orient_p1 = m_pTrack->points[(i + 1) % m_pTrack->points.size()].orient;
+
+		vector<Pnt3f> points = find_Cpoints(i);
+
+		for (size_t j = 0; j < DIVIDE_LINE; j++) {
+			size_t current_index = i * DIVIDE_LINE + j;
+			float t0 = t_param[current_index];
+
+			vector<Pnt3f> qts = find_two_qt(tw->splineBrowser->value(), points, t0);
+
+			glm::vec3 qt0_v(qts[0].x, qts[0].y, qts[0].z);
+			glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
+			glm::vec3 forward = qt1_v - qt0_v;
+
+			//forward 可以改一下，遇到邊界無法跨度兩個線段
+			forward = glm::normalize(forward);
+
+			Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
+			glm::vec3 orient_t0_v(orient_t0.x, orient_t0.y, orient_t0.z);
+			orient_t0_v = glm::normalize(orient_t0_v);
+
+			float length = glm::distance(qt0_v, qt1_v);
+			arc_length[current_index] = length;
+			if (current_index == 0) accumulate_length[current_index] = length;
+			else  accumulate_length[current_index] = accumulate_length[current_index - 1] + length;
+			all_qt[current_index] = qt0_v;
+			all_orient[current_index] = orient_t0_v;
+			all_forward[current_index] = forward;
+		}
+	}
+
+	//setup speeds
+	float total_energy = 2000.0f;
+	float kinetic_energy = 2000.0f;
+	float potential_energy = 0.0f;
+	float h_coefficient = 20.0f;
+	float current_h = all_qt[0].y;
+	speeds[0] = 0.05 * sqrt(kinetic_energy);
+	for (int i = 1; i < size; ++i) {
+		float h_diff = all_qt[i].y - all_qt[i - 1].y;
+		potential_energy = potential_energy + h_coefficient * h_diff;
+		kinetic_energy = total_energy - potential_energy;
+		if (kinetic_energy <= 50) {
+			total_energy += 50.0f;
+			kinetic_energy = 50.0f;
+		}
+		//cout << "p: " << potential_energy << endl;
+		float current_speed = 0.05 * sqrt(kinetic_energy);
+		speeds[i] = current_speed;
+	}
+
+}
+
+//use current length to find parameter t
+float TrainView::length_to_t(float length) {
+	for (size_t i = 0; i < accumulate_length.size() - 1; ++i) {
+		if (length < accumulate_length[i]) {
+			return t_param[i];
+		}
+	}
+	return t_param.back();
+}
+
+//use given length to find current index
+size_t TrainView::length_to_index(float length) {
+
+	if (length < 0) {
+		length = accumulate_length.back() + length;
+	}
+	for (size_t i = 0; i < accumulate_length.size() - 1; ++i) {
+		if (length < accumulate_length[i]) {
+			return i;
+		}
+	}
+	return accumulate_length.size() - 1;
+}
+
+//find current parameter t by C_length
+size_t TrainView::C_length_index() {
+	int index = -1;
+	for (size_t i = 0; i < accumulate_length.size() - 1; ++i) {
+		if (m_pTrack->C_length < accumulate_length[i]) {
+			index = i;
+			break;
+		}
+	}
+	if (index == -1) {
+		index = accumulate_length.size() - 1;
+	}
+	return index;
+}
+
+//find current index by trainU
+size_t TrainView::trainU_index() {
+	int index = int(m_pTrack->trainU / 1) * DIVIDE_LINE;
+	index = index + (m_pTrack->trainU - int(m_pTrack->trainU / 1)) * DIVIDE_LINE;
+	if (index == t_param.size()) --index;
+	return index;
+}
+
+//match current length and trainU
+void TrainView::match_length() {
+	int index = C_length_index();
+
+	m_pTrack->trainU = (index / DIVIDE_LINE) + length_to_t(m_pTrack->C_length);
+	//cout << "index: " << index << endl;
+	//cout << "length_to_t(m_pTrack->C_length): " << length_to_t(m_pTrack->C_length) << endl;
+	//cout << "C_length: " << m_pTrack->C_length << endl;
+	//cout << " trainU: " << m_pTrack->trainU << endl;
+
+}
+
+//match current trainU to length 
+void TrainView::match_trainU() {
+	int index = trainU_index();
+	m_pTrack->C_length = accumulate_length[index];
 }
