@@ -35,22 +35,19 @@ TrainWindow(const int x, const int y)
 
 		runButton = new Fl_Button(605,pty,60,20,"Run");
 		togglify(runButton);
-
 		Fl_Button* fb = new Fl_Button(700,pty,25,20,"@>>");
 		fb->callback((Fl_Callback*)forwCB,this);
 		Fl_Button* rb = new Fl_Button(670,pty,25,20,"@<<");
 		rb->callback((Fl_Callback*)backCB,this);
-		
 		arcLength = new Fl_Button(730,pty,65,20,"ArcLength");
 		togglify(arcLength,1);
-  
 		pty+=25;
+
 		speed = new Fl_Value_Slider(655,pty,140,20,"speed");
 		speed->range(0,10);
 		speed->value(2);
 		speed->align(FL_ALIGN_LEFT);
 		speed->type(FL_HORIZONTAL);
-
 		pty += 30;
 
 		// camera buttons - in a radio button group
@@ -67,7 +64,6 @@ TrainWindow(const int x, const int y)
 		fpv->selection_color((Fl_Color)3);
 		fpv->callback((Fl_Callback*)damageCB, this);
 		viewGroup->end();
-
 		pty += 30;
 
 		// camera buttons - in a radio button group
@@ -89,7 +85,6 @@ TrainWindow(const int x, const int y)
         topCam->selection_color((Fl_Color)3);
 		topCam->callback((Fl_Callback*)damageCB,this);
 		camGroup->end();
-
 		pty += 30;
 
 		// FPV buttons - in a radio button group
@@ -106,7 +101,16 @@ TrainWindow(const int x, const int y)
 		TPV->selection_color((Fl_Color)3);
 		TPV->callback((Fl_Callback*)damageCB, this);
 		FPVGroup->end();
+		pty += 30;
 
+		pickObjects = new Fl_Button(605, pty, 100, 20, "Pick");
+		togglify(pickObjects, 0);
+		deleteObjects = new Fl_Button(700, pty, 100, 20, "Delete");
+		deleteObjects->callback((Fl_Callback*)delObject, this);
+		pty += 30;
+
+		AddTree = new Fl_Button(605, pty, 100, 20, "Add Tree");
+		AddTree->callback((Fl_Callback*)addTree, this);
 		pty += 30;
 
 		// browser to select spline types
@@ -117,7 +121,6 @@ TrainWindow(const int x, const int y)
 		splineBrowser->add("Cardinal Cubic");
 		splineBrowser->add("Cubic B-Spline");
 		splineBrowser->select(2);
-
 		pty += 110;
 
 		// add and delete points
@@ -125,8 +128,8 @@ TrainWindow(const int x, const int y)
 		ap->callback((Fl_Callback*)addPointCB,this);
 		Fl_Button* dp = new Fl_Button(690,pty,80,20,"Delete Point");
 		dp->callback((Fl_Callback*)deletePointCB,this);
-
 		pty += 25;
+
 		// reset the points
 		resetButton = new Fl_Button(735,pty,60,20,"Reset");
 		resetButton->callback((Fl_Callback*)resetCB,this);
@@ -134,8 +137,8 @@ TrainWindow(const int x, const int y)
 		loadb->callback((Fl_Callback*) loadCB, this);
 		Fl_Button* saveb = new Fl_Button(670,pty,60,20,"Save");
 		saveb->callback((Fl_Callback*) saveCB, this);
-
 		pty += 25;
+
 		// roll the points
 		Fl_Button* rx = new Fl_Button(605,pty,30,20,"R+X");
 		rx->callback((Fl_Callback*)rpxCB,this);
@@ -145,7 +148,6 @@ TrainWindow(const int x, const int y)
 		rz->callback((Fl_Callback*)rpzCB,this);
 		Fl_Button* rzp = new Fl_Button(700,pty,30,20,"R-Z");
 		rzp->callback((Fl_Callback*)rmzCB,this);
-
 		pty+=30;
 
 		// browser to select spline types
@@ -156,38 +158,43 @@ TrainWindow(const int x, const int y)
 		lightBrowser->add("point");
 		lightBrowser->add("spot");
 		lightBrowser->select(1);
+		pty += 135;
 
-		pty += 110;
+		waveTypeBrowser = new Fl_Browser(605, pty, 120, 75, "wave Type");
+		waveTypeBrowser->type(1);		// select
+		waveTypeBrowser->callback((Fl_Callback*)damageCB, this);
+		waveTypeBrowser->add("Sine wave");
+		waveTypeBrowser->add("Height map");
+		waveTypeBrowser->select(1);
+		pty += 100;
 
-		pty += 25;
 		waterAmplitude = new Fl_Value_Slider(675, pty, 120, 20, "Amplitude");
 		waterAmplitude->range(0, 10);
 		waterAmplitude->value(1);
 		waterAmplitude->align(FL_ALIGN_LEFT);
 		waterAmplitude->type(FL_HORIZONTAL);
 		pty += 25;
+
 		waterWaveLength = new Fl_Value_Slider(675, pty, 120, 20, "Wave length");
 		waterWaveLength->range(0, 10);
 		waterWaveLength->value(5);
 		waterWaveLength->align(FL_ALIGN_LEFT);
 		waterWaveLength->type(FL_HORIZONTAL);
 		pty += 25;
+
 		waterSpeed = new Fl_Value_Slider(675, pty, 120, 20, "Wave Speed");
 		waterSpeed->range(0, 10);
 		waterSpeed->value(5);
 		waterSpeed->align(FL_ALIGN_LEFT);
 		waterSpeed->type(FL_HORIZONTAL);
-
 		pty += 30;
 
 		envLight = new Fl_Button(605, pty, 100, 20, "Lighting");
 		togglify(envLight, 1);
-
 		pty += 30;
 
 		physics = new Fl_Button(605, pty, 100, 20, "Physics");
 		togglify(physics, 1);
-
 		pty += 30;
 
 		//add a car
@@ -196,27 +203,8 @@ TrainWindow(const int x, const int y)
 		//delete a car
 		delete_car = new Fl_Button(700, pty, 80, 20, "Delete car");
 		delete_car->callback((Fl_Callback*)delCar, this);
-
 		pty += 30;
 
-		waveTypeBrowser = new Fl_Browser(605, pty, 120, 75, "wave Type");
-		waveTypeBrowser->type(1);		// select
-		waveTypeBrowser->callback((Fl_Callback*)damageCB, this);
-		waveTypeBrowser->add("Sine wave");
-		waveTypeBrowser->add("Height map");
-		waveTypeBrowser->select(1);
-
-		pty += 100;
-
-		trackBrowser = new Fl_Browser(605, pty, 120, 75, "track Type");
-		trackBrowser->type(2);		// select
-		trackBrowser->callback((Fl_Callback*)damageCB, this);
-		trackBrowser->add("Single");
-		trackBrowser->add("Double Flat");
-		trackBrowser->add("Double 3D");
-		trackBrowser->select(2);
-
-		pty += 100;
 
 
 

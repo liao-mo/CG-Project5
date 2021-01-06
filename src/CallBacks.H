@@ -63,3 +63,9 @@ void rmzCB(Fl_Widget*, TrainWindow* tw);
 void addCar(Fl_Widget*, TrainWindow* tw);
 //delete a car
 void delCar(Fl_Widget*, TrainWindow* tw);
+
+//delete an object
+void delObject(Fl_Widget*, TrainWindow* tw);
+
+//add a new tree
+void addTree(Fl_Widget*, TrainWindow* tw);

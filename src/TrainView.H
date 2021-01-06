@@ -12,6 +12,7 @@
 #include "WaterMesh.h"
 #include "SkyBox.h"
 #include "FrameBuffer.h"
+#include "Object.H"
 
 // this uses the old ArcBall Code
 #include "Utilities/ArcBallCam.H"
@@ -23,7 +24,7 @@
 #define SCR_WIDTH 800
 #define SCR_HEIGHT 600
 #define NEAR 0.01
-#define FAR 5000.0
+#define FAR 99999.0
 #define DIVIDE_LINE 100
 
 const int TEXTURE_WIDTH = 1920;  // NOTE: texture size cannot be larger than
@@ -66,22 +67,22 @@ class TrainView : public Fl_Gl_Window
 		void drawStuff(bool doingShadows=false);
 
 		//my function that draws the train
-		void draw_train(bool doingShadows);
+		void draw_train();
 
 		//my function that draws the car
-		void draw_car(bool doingShadows, float backward_offset);
+		void draw_cars();
 
 		//my function that draws the track
 		void draw_track();
 
 		//my function that draws the sleeper
-		void draw_sleeper(bool doingShadows);
+		void draw_sleeper();
 
-		//my function that draws my ground
-		void draw_ground();
+		//my function that draws my terrain
+		void draw_terrain();
 
 		//my function that draws my env models
-		void draw_env_model(bool doingShadows);
+		void draw_env_model();
 
 		// setup the projection - assuming that the projection stack has been
 		// cleared for you
@@ -127,7 +128,9 @@ class TrainView : public Fl_Gl_Window
 		
 	public:
 		ArcBallCam		arcball;			// keep an ArcBall for the UI
+		int				selectedObject;  // simple - just remember which object is selected
 		int				selectedCube;  // simple - just remember which cube is selected
+		int				selectedTree;  // simple - just remember which tree is selected
 
 		TrainWindow*	tw;				// The parent of this display window
 		CTrack*			m_pTrack;		// The track of the entire scene
@@ -171,6 +174,8 @@ class TrainView : public Fl_Gl_Window
 		VAO* plane			= nullptr;
 		UBO* commom_matrices= nullptr;
 		void loadTextures();
+		void initUBO();
+		void initPlane();
 
 		//models
 		Model* sci_fi_train = nullptr;
@@ -178,11 +183,16 @@ class TrainView : public Fl_Gl_Window
 		Model* my_sleeper = nullptr;			
 		Model* my_track = nullptr;			
 		Model* my_car = nullptr;				
-		Model* my_terrain = nullptr;				
-		std::vector<Model*> scene_models; 
+		Model* my_terrain = nullptr;	
+		vector<Tree> my_trees;
+		std::vector<Model*> scene_models;
 		unsigned int num_of_car;
+		bool initTree = true;
 		void loadModels();
 		void drawTeapot();
+		void drawTrees();
+		void addTree();
+		void deleteSelectedObject();
 
 		//water
 		WaterMesh* waterMesh = nullptr;
@@ -210,6 +220,8 @@ class TrainView : public Fl_Gl_Window
 		ALCcontext* context = nullptr;
 		ALuint source;
 		ALuint buffer;
+		void initSound();
+		void updateListenerPos();
 
 		//timer
 		int old_t;

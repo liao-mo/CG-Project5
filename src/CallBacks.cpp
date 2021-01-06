@@ -263,3 +263,11 @@ void delCar(Fl_Widget*, TrainWindow* tw)
 	}
 	tw->damageMe();
 }
+
+void delObject(Fl_Widget*, TrainWindow* tw) {
+	tw->trainView->deleteSelectedObject();
+}
+
+void addTree(Fl_Widget*, TrainWindow* tw) {
+	tw->trainView->addTree();
+}

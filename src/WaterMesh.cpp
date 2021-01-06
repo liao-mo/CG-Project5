@@ -73,13 +73,13 @@ void WaterMesh::draw(int mode) {
 	else if (mode == 2) {
 		drawHeightMap();
 	}
-	else if (mode == 3) {
-		//interactive
-		drawInteractiveWave();
-	}
-	else if (mode == 4) {
-		drawColorUV();
-	}
+	//else if (mode == 3) {
+	//	//interactive
+	//	drawInteractiveWave();
+	//}
+	//else if (mode == 4) {
+	//	drawColorUV();
+	//}
 }
 
 void WaterMesh::drawSineWave() {
@@ -157,6 +157,7 @@ void WaterMesh::drawHeightMap() {
 
 	grid->Draw(*heightMap_shader);
 	heightMap_textures[heightMap_counter]->unbind(1);
+	heightMap_textures[heightMap_counter]->unbind(2);
 }
 
 void WaterMesh::drawInteractiveWave() {

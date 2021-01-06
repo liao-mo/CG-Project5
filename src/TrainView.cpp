@@ -39,11 +39,10 @@ TrainView(int x, int y, int w, int h, const char* l) :
 
 	resetArcball();
 	camera = Camera(glm::vec3(0.0f, 0.0f, 3.0f));
-	camera.MovementSpeed = 200.0f;
+	camera.MovementSpeed = 1000.0f;
 	camera.Position = glm::vec3(50.0, 100.0, 0.0);
 	old_t = glutGet(GLUT_ELAPSED_TIME);
 	k_pressed = false;
-	
 }
 
 // * Reset the camera to look at the world
@@ -121,6 +120,27 @@ int TrainView::handle(int event)
 			cp->pos.z = (float)rz;
 			damage(1);
 		}
+		// Compute the new tree position
+		if ((last_push == FL_LEFT_MOUSE) && (selectedTree >= 0)) {
+			Tree* alter_tree = &my_trees[selectedTree];
+
+			double r1x, r1y, r1z, r2x, r2y, r2z;
+			getMouseLine(r1x, r1y, r1z, r2x, r2y, r2z);
+
+			double rx, ry, rz;
+			mousePoleGo(r1x, r1y, r1z, r2x, r2y, r2z,
+				static_cast<double>(alter_tree->pos.x),
+				static_cast<double>(alter_tree->pos.y),
+				static_cast<double>(alter_tree->pos.z),
+				rx, ry, rz,
+				(Fl::event_state() & FL_CTRL) != 0);
+
+			alter_tree->pos.x = (float)rx;
+			alter_tree->pos.y = (float)ry;
+			alter_tree->pos.z = (float)rz;
+			my_trees[selectedTree].update_modelMatrix();
+			damage(1);
+		}
 		else if (last_push == FL_RIGHT_MOUSE) {
 			// where is the mouse?
 			int xpos = Fl::event_x();
@@ -174,6 +194,9 @@ int TrainView::handle(int event)
 					m_pTrack->points[selectedCube].orient.x,
 					m_pTrack->points[selectedCube].orient.y,
 					m_pTrack->points[selectedCube].orient.z);
+			else if (selectedTree >= 0) {
+				cout << "Tree " << selectedTree << " x, y, z = " << my_trees[selectedTree].pos.x << ", " << my_trees[selectedTree].pos.y << ", " << my_trees[selectedTree].pos.z << endl;
+			}
 			else
 				printf("Nothing Selected\n");
 
@@ -203,7 +226,7 @@ void TrainView::draw()
 	if (gladLoadGL())
 	{
 		//initiailize VAO, VBO, Shader...
-		
+
 		//load shaders
 		loadShaders();
 
@@ -221,108 +244,15 @@ void TrainView::draw()
 
 		//initialize VAOs
 		initVAOs();
+
+		//original functions
+		initUBO();
+
+		initPlane();
 		
-		//original stuff
-		if (!this->commom_matrices)
-			this->commom_matrices = new UBO();
-			this->commom_matrices->size = 2 * sizeof(glm::mat4);
-			glGenBuffers(1, &this->commom_matrices->ubo);
-			glBindBuffer(GL_UNIFORM_BUFFER, this->commom_matrices->ubo);
-			glBufferData(GL_UNIFORM_BUFFER, this->commom_matrices->size, NULL, GL_STATIC_DRAW);
-			glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-		if (!this->plane) {
-			GLfloat  vertices[] = {
-				-0.5f ,0.0f , -0.5f,
-				-0.5f ,0.0f , 0.5f ,
-				0.5f ,0.0f ,0.5f ,
-				0.5f ,0.0f ,-0.5f };
-			GLfloat  normal[] = {
-				0.0f, 1.0f, 0.0f,
-				0.0f, 1.0f, 0.0f,
-				0.0f, 1.0f, 0.0f,
-				0.0f, 1.0f, 0.0f };
-			GLfloat  texture_coordinate[] = {
-				0.0f, 0.0f,
-				1.0f, 0.0f,
-				1.0f, 1.0f,
-				0.0f, 1.0f };
-			GLuint element[] = {
-				0, 1, 2,
-				0, 2, 3, };
-
-			this->plane = new VAO;
-			this->plane->element_amount = sizeof(element) / sizeof(GLuint);
-			glGenVertexArrays(1, &this->plane->vao);
-			glGenBuffers(3, this->plane->vbo);
-			glGenBuffers(1, &this->plane->ebo);
-
-			glBindVertexArray(this->plane->vao);
-
-			// Position attribute
-			glBindBuffer(GL_ARRAY_BUFFER, this->plane->vbo[0]);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-			glEnableVertexAttribArray(0);
-
-			// Normal attribute
-			glBindBuffer(GL_ARRAY_BUFFER, this->plane->vbo[1]);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(normal), normal, GL_STATIC_DRAW);
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
-			glEnableVertexAttribArray(1);
-
-			// Texture Coordinate attribute
-			glBindBuffer(GL_ARRAY_BUFFER, this->plane->vbo[2]);
-			glBufferData(GL_ARRAY_BUFFER, sizeof(texture_coordinate), texture_coordinate, GL_STATIC_DRAW);
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
-			glEnableVertexAttribArray(2);
-
-			//Element attribute
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->plane->ebo);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(element), element, GL_STATIC_DRAW);
-
-			// Unbind VAO
-			glBindVertexArray(0);
-		}
-
 		loadTextures();
-		
-		if (!this->device){
-			this->device = alcOpenDevice(NULL);
-			if (!this->device) {
-				puts("ERROR::NO_AUDIO_DEVICE");
-			}
-			ALboolean enumeration = alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT");
-			this->context = alcCreateContext(this->device, NULL);
-			if (!alcMakeContextCurrent(context))
-				puts("Failed to make context current");
-			this->source_pos = glm::vec3(0.0f, 0.0f, 0.0f);
-			ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
-			alListener3f(AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
-			alListener3f(AL_VELOCITY, 0, 0, 0);
-			alListenerfv(AL_ORIENTATION, listenerOri);
-			alGenSources((ALuint)1, &this->source);
-			alSourcef(this->source, AL_PITCH, 1);
-			alSourcef(this->source, AL_GAIN, 1.0f);
-			alSource3f(this->source, AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
-			alSource3f(this->source, AL_VELOCITY, 0, 0, 0);
-			alSourcei(this->source, AL_LOOPING, AL_TRUE);
-			alGenBuffers((ALuint)1, &this->buffer);
-			ALsizei size, freq;
-			ALenum format;
-			ALvoid* data;
-			ALboolean loop = AL_TRUE;
-			//Material from: ThinMatrix
-			alutLoadWAVFile((ALbyte*)"../resources/audio/none.wav", &format, &data, &size, &freq, &loop);
-			alBufferData(this->buffer, format, data, size, freq);
-			alSourcei(this->source, AL_BUFFER, this->buffer);
-			if (format == AL_FORMAT_STEREO16 || format == AL_FORMAT_STEREO8)
-				puts("TYPE::STEREO");
-			else if (format == AL_FORMAT_MONO16 || format == AL_FORMAT_MONO8)
-				puts("TYPE::MONO");
-			alSourcef(source, AL_GAIN, 0.1);
-			alSourcePlay(this->source);
-		}
+
+		initSound();
 	}
 	else
 		throw std::runtime_error("Could not initialize GLAD!");
@@ -345,7 +275,8 @@ void TrainView::draw()
 	// prepare for projection
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	
+	projectionMatrix = glm::mat4(1.0);
+
 	setProjection();		// put the code to set up matrices here
 	update_arcLengh();
 
@@ -354,55 +285,44 @@ void TrainView::draw()
 	glEnable(GL_DEPTH_TEST);
 
 	// set linstener position 
-	if(selectedCube >= 0)
-		alListener3f(AL_POSITION, 
-			m_pTrack->points[selectedCube].pos.x,
-			m_pTrack->points[selectedCube].pos.y,
-			m_pTrack->points[selectedCube].pos.z);
-	else
-		alListener3f(AL_POSITION, 
-			this->source_pos.x, 
-			this->source_pos.y,
-			this->source_pos.z);
-
-
-	//*********************************************************************
+	updateListenerPos();
+	
 	// now draw the ground plane
-	//*********************************************************************
-	// set to opengl fixed pipeline(use opengl 1.x draw function)
 	glUseProgram(0);
 
 	//setupFloor();
 	//glDisable(GL_LIGHTING);
 	//drawFloor(200,10);
-
 	//glEnable(GL_LIGHTING);
 	setupObjects();
 	drawStuff();
 
 	//use shader===========================================================================================================
-
 	setUBO();
 	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
 
 	//update current light_shader
 	update_light_shaders();
 
-	//drawGround();
-
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//glViewport(0, 0, 1920,1080);
-
 	//drawMainFBO();
 
 	//drawSubScreenFBO();
 
-	//drawTrain();
-
 	//drawTeapot();
+
+	drawTrees();
 	
-	//drawWater(tw->waveTypeBrowser->value());
 	draw_track();
+
+	draw_sleeper();
+
+	draw_train();
+
+	draw_cars();
+
+	draw_terrain();
+
+	drawWater(tw->waveTypeBrowser->value());
 
 	drawSkyBox();
 
@@ -418,16 +338,13 @@ void TrainView::draw()
 	glUseProgram(0);
 }
 
-// * This sets up both the Projection and the ModelView matrices
-//   HOWEVER: it doesn't clear the projection first (the caller handles
-//   that) - its important for picking
 void TrainView::
 setProjection()
 {
 	glUseProgram(0);
 	// Compute the aspect ratio (we'll need it)
 	float aspect = static_cast<float>(w()) / static_cast<float>(h());
-	projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)w() / (float)h(), (float)NEAR, (float)FAR);
+	projectionMatrix = projectionMatrix * glm::perspective(glm::radians(camera.Zoom), (float)w() / (float)h(), (float)NEAR, (float)FAR);
 
 	// Check whether we use the world camp
 	if (tw->worldCam->value()) {
@@ -442,8 +359,6 @@ setProjection()
 			updata_camera();
 			glMatrixMode(GL_PROJECTION);
 			glLoadIdentity();
-
-			
 			glMultMatrixf(&projectionMatrix[0][0]);
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
@@ -507,8 +422,7 @@ setProjection()
 
 			center = trans * center;
 			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			gluPerspective(120, 1, 1, 1000);
+			glMultMatrixf(&projectionMatrix[0][0]);
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
 			gluLookAt(
@@ -522,6 +436,10 @@ setProjection()
 				orient_t0_v.y,
 				orient_t0_v.z
 			);
+			viewMatrix = glm::lookAt(
+				glm::vec3(eye.x,eye.y,eye.z),
+				glm::vec3(center.x,center.y,center.z),
+				glm::vec3(orient_t0_v.x,orient_t0_v.y,orient_t0_v.z));
 		}
 		else if (tw->TPV->value() == 1) {
 			trans = glm::translate(trans, TPV_up_value * offset0);
@@ -530,8 +448,7 @@ setProjection()
 
 			center = trans * center;
 			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			gluPerspective(120, 1, 1, 1000);
+			glMultMatrixf(&projectionMatrix[0][0]);
 			glMatrixMode(GL_MODELVIEW);
 			glLoadIdentity();
 			gluLookAt(
@@ -545,13 +462,14 @@ setProjection()
 				orient_t0_v.y,
 				orient_t0_v.z
 			);
+			viewMatrix = glm::lookAt(
+				glm::vec3(eye.x, eye.y, eye.z),
+				glm::vec3(center.x, center.y, center.z),
+				glm::vec3(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z));
 		}
 	}
 }
 
-//	NOTE: if you're drawing shadows, DO NOT set colors (otherwise, you get 
-//       colored shadows). this gets called twice per draw 
-//       -- once for the objects, once for the shadows
 void TrainView::drawStuff(bool doingShadows)
 {
 	// Draw the control points
@@ -590,38 +508,70 @@ doPick()
 	// Set up the pick matrix on the stack - remember, FlTk is
 	// upside down!
 	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity ();
-	gluPickMatrix((double)mx, (double)(viewport[3]-my), 
-						5, 5, viewport);
+	glLoadIdentity();
+	projectionMatrix = glm::mat4(1.0);
+	gluPickMatrix((double)mx, (double)(viewport[3] - my),
+		5, 5, viewport);
+	float projection_temp[16];
+	glGetFloatv(GL_PROJECTION_MATRIX, projection_temp);
+	projectionMatrix = glm::make_mat4(projection_temp);
+
 
 	// now set up the projection
 	setProjection();
 
 	// now draw the objects - but really only see what we hit
 	GLuint buf[100];
-	glSelectBuffer(100,buf);
+	glSelectBuffer(100, buf);
 	glRenderMode(GL_SELECT);
 	glInitNames();
 	glPushName(0);
 
 	// draw the cubes, loading the names as we go
-	for(size_t i=0; i<m_pTrack->points.size(); ++i) {
-		glLoadName((GLuint) (i+1));
+	for (size_t i = 0; i < m_pTrack->points.size(); ++i) {
+		glLoadName((GLuint)(i + 1));
 		m_pTrack->points[i].draw();
 	}
 
+	if (tw->pickObjects->value()) {
+		current_light_shader->use();
+		for (int i = 0; i < my_trees.size(); ++i) {
+			glLoadName((GLuint)(m_pTrack->points.size() + i + 1));
+			current_light_shader->setMat4("model", my_trees[i].model_matrix);
+			my_trees[i].model->Draw(*current_light_shader);
+		}
+		glUseProgram(0);
+	}
+
+
 	// go back to drawing mode, and see how picking did
+	selectedCube = -1;
+	selectedTree = -1;
 	int hits = glRenderMode(GL_RENDER);
 	if (hits) {
 		// warning; this just grabs the first object hit - if there
 		// are multiple objects, you really want to pick the closest
 		// one - see the OpenGL manual 
 		// remember: we load names that are one more than the index
-		selectedCube = buf[3]-1;
-	} else // nothing hit, nothing selected
-		selectedCube = -1;
+		selectedObject = buf[3] - 1;
+	}
+	else // nothing hit, nothing selected
+		selectedObject = -1;
 
-	printf("Selected Cube %d\n",selectedCube);
+	if (selectedObject < m_pTrack->points.size()) { // hit control points
+		selectedCube = selectedObject;
+		printf("Selected Cube %d\n", selectedCube);
+	}
+	else if (selectedObject < m_pTrack->points.size() + my_trees.size()) { // hit trees
+		selectedTree = selectedObject - m_pTrack->points.size();
+		cout << "you hit tree " << selectedTree << endl;
+	}
+	else {
+		cout << "you hit nothing!" << endl;
+	}
+
+
+	
 
 	//drawColorUVFBO();
 	//colorUVFBO->bind();
@@ -690,7 +640,7 @@ void TrainView::update_light_shaders() {
 	else if (tw->lightBrowser->value() == 3) {
 		current_light_shader = spot_light_shader;
 	}
-
+	current_light_shader->use();
 
 	glm::mat4 model = glm::mat4(1.0f);
 
@@ -705,11 +655,6 @@ void TrainView::update_light_shaders() {
 		directional_light_shader->setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 		// material properties
 		directional_light_shader->setFloat("material.shininess", 32.0f);
-		// view/projection transformations
-		// world transformation
-		//model = glm::mat4(1.0f);
-		//model = glm::scale(model, glm::vec3(5.0, 5.0, 5.0));
-		//directional_light_shader->setMat4("model", model);
 	}
 
 	//point light
@@ -729,11 +674,6 @@ void TrainView::update_light_shaders() {
 
 		// material properties
 		point_light_shader->setFloat("material.shininess", 32.0f);
-
-		// world transformation
-		//model = glm::mat4(1.0f);
-		//model = glm::scale(model, glm::vec3(5.0, 5.0, 5.0));
-		//point_light_shader->setMat4("model", model);
 	}
 
 	//spot light
@@ -754,12 +694,8 @@ void TrainView::update_light_shaders() {
 		spot_light_shader->setFloat("light.quadratic", 0.01f);
 		// material properties
 		spot_light_shader->setFloat("material.shininess", 32.0f);
-
-		// world transformation
-		//model = glm::mat4(1.0f);
-		//model = glm::scale(model, glm::vec3(5.0, 5.0, 5.0));
-		//spot_light_shader->setMat4("model", model);
 	}
+	glUseProgram(0);
 }
 
 void TrainView::drawGround() {
@@ -777,6 +713,8 @@ void TrainView::drawGround() {
 }
 
 void TrainView::draw_track() {
+	current_light_shader->use();
+
 	//draw track with respect to my t_param and qt vectors data
 	for (int i = 0; i < t_param.size(); ++i) {
 		glm::vec3 qt0_v = all_qt[i];
@@ -803,117 +741,178 @@ void TrainView::draw_track() {
 		glm::vec3 right_track3 = qt0_v - offset_vec2;
 
 		glLineWidth(5);
+		float scale_value = 1.0f;
 
-		//draw selected track type
-		if (tw->trackBrowser->value() == 1) {
-			//single track
-			glBegin(GL_LINES);
-			glVertex3f(qt0_v.x, qt0_v.y, qt0_v.z);
-			glVertex3f(qt1_v.x, qt1_v.y, qt1_v.z);
-			glEnd();
+		mat4 rotate = glm::inverse(glm::lookAt(
+			qt0_v,
+			qt1_v,
+			orient_t0_v));
+
+		float up_offset = -0.3f;
+		glm::vec3 side_offset_v = glm::cross(forward, orient_t0_v);
+		side_offset_v = glm::normalize(side_offset_v);
+		side_offset_v *= 1.5f;
+
+		// world transformation
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z));
+		//model = glm::translate(model, glm::vec3(side_offset_v.x, side_offset_v.y, side_offset_v.z));
+		model = rotate * model;
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
+
+		current_light_shader->setMat4("model", model);
+		my_track->Draw(*current_light_shader);
+		glLineWidth(1);
+	}
+	glUseProgram(0);
+}
+
+void TrainView::draw_sleeper() {
+	current_light_shader->use();
+
+	float current_length = 0;
+	while (current_length < accumulate_length.back()) {
+		size_t i = length_to_index(current_length);
+
+		glm::vec3 qt0_v = all_qt[i];
+		glm::vec3 qt1_v;
+		if (i == t_param.size() - 1) qt1_v = all_qt[0];
+		else qt1_v = all_qt[i + 1];
+
+		glm::vec3 orient_t0_v = all_orient[i];
+		glm::vec3 forward = all_forward[i];
+
+		glm::vec3 offset_vec1 = glm::cross(forward, orient_t0_v);
+		offset_vec1 = glm::normalize(offset_vec1);
+		offset_vec1 *= 1.5 * DIVIDE_LINE / 100;
+		glm::vec3 offset_vec2 = 1.5f * offset_vec1;
+
+
+		float scale_value = 3.5f;
+
+		mat4 rotate = glm::inverse(glm::lookAt(
+			qt0_v,
+			qt1_v,
+			orient_t0_v));
+
+		float up_offset = -1.5f;
+
+		// world transformation
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z));
+		//model = glm::translate(model, glm::vec3(side_offset_v.x, side_offset_v.y, side_offset_v.z));
+		model = rotate * model;
+		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+		model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
+
+		current_light_shader->setMat4("model", model);
+		my_sleeper->Draw(*current_light_shader);
+		current_length += 5;
+	}
+	glUseProgram(0);
+}
+
+void TrainView::draw_train() {
+	current_light_shader->use();
+
+	if (!(tw->trainCam->value() == 1 && tw->FPV->value() == 1)) {
+		size_t i;
+		if (tw->arcLength->value() == 0) {
+			i = int(m_pTrack->trainU / 1) * DIVIDE_LINE;
+			i = i + (m_pTrack->trainU - int(m_pTrack->trainU / 1)) * DIVIDE_LINE - 0.1;
+			if (i < 0) {
+				i = (float)m_pTrack->points.size() - i;
+			}
 		}
-		else if (tw->trackBrowser->value() == 2) {
-			//left track
-			glBegin(GL_POLYGON);
-			unsigned r = 50;
-			unsigned g = 50;
-			unsigned b = 50;
-			glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
-			glVertex3f(left_track0.x, left_track0.y, left_track0.z);
-			glVertex3f(left_track1.x, left_track1.y, left_track1.z);
-			glVertex3f(left_track2.x, left_track2.y, left_track2.z);
-			glVertex3f(left_track3.x, left_track3.y, left_track3.z);
-			glEnd();
-
-			//right track
-			glBegin(GL_POLYGON);
-			glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
-			glVertex3f(right_track0.x, right_track0.y, right_track0.z);
-			glVertex3f(right_track1.x, right_track1.y, right_track1.z);
-			glVertex3f(right_track2.x, right_track2.y, right_track2.z);
-			glVertex3f(right_track3.x, right_track3.y, right_track3.z);
-			glEnd();
+		else {
+			i = C_length_index();
 		}
-		else if (tw->trackBrowser->value() == 3) {
-			float scale_value = 0.5f;
-			glm::mat4 scale = glm::mat4(1.0f);
-			scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
+		float t0 = t_param[i];
 
+		glm::vec3 qt0_v = all_qt[i];
+		glm::vec3 qt1_v;
+		if (i == t_param.size() - 1) qt1_v = all_qt[0];
+		else qt1_v = all_qt[i + 1];
 
-			mat4 rotate = glm::inverse(glm::lookAt(
-				qt0_v,
-				qt1_v,
-				orient_t0_v));
-			float rotateArray2[16] = { 0.0 };
-			const float* pSource2 = (const float*)glm::value_ptr(rotate);
-			for (int i = 0; i < 16; ++i)
-				rotateArray2[i] = pSource2[i];
+		glm::vec3 orient_t0_v = all_orient[i];
+		glm::vec3 forward = all_forward[i];
 
-			float up_offset = -0.3f;
-			glm::vec3 side_offset_v = glm::cross(forward, orient_t0_v);
-			side_offset_v = glm::normalize(side_offset_v);
-			side_offset_v *= 1.5f;
+		float up_offset = 0.0f;
+		float scale_value = 1.5f;
 
-			//glm::mat4 trans = glm::mat4(1.0f);
-			//trans = glm::translate(trans, qt0_v);
-			//trans = glm::translate(trans, up_offset * orient_t0_v);
-			//trans = glm::translate(trans, side_offset_v*1.0f);
+		mat4 rotate = glm::inverse(glm::lookAt(qt0_v, qt1_v, orient_t0_v));
 
+		// world transformation
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z));
+		model = rotate * model;
+		//model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
+		model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
 
-			//glPushMatrix();
-			//glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
-			//glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
-			//glTranslated(side_offset_v.x, side_offset_v.y,side_offset_v.z);
-			//glMultMatrixf(rotateArray2);
-			//glRotatef(90.0f, 0, 1, 0);
-			//glScalef(scale_value, scale_value, scale_value);
+		current_light_shader->setMat4("model", model);
+		sci_fi_train->Draw(*current_light_shader);
+	}
+	glUseProgram(0);
+}
+
+void TrainView::draw_cars() {
+	current_light_shader->use();
+
+	float first_offset = 20.0f;
+	for (int i = 0; i < num_of_car; ++i) {
+		float backward_offset = first_offset + 15.0 * i;
+
+		if (!(tw->trainCam->value() == 1 && tw->FPV->value() == 1)) {
+			size_t i;
+			i = length_to_index(m_pTrack->C_length - backward_offset);
+			float t0 = t_param[i];
+
+			glm::vec3 qt0_v = all_qt[i];
+			glm::vec3 qt1_v;
+			if (i == t_param.size() - 1) qt1_v = all_qt[0];
+			else qt1_v = all_qt[i + 1];
+
+			glm::vec3 orient_t0_v = all_orient[i];
+			glm::vec3 forward = all_forward[i];
+
+			float scale_value = 1.0;
+			float up_offset = 5.0f;
+
+			mat4 rotate = glm::inverse(glm::lookAt(qt0_v, qt1_v, orient_t0_v));
 
 			// world transformation
 			glm::mat4 model = glm::mat4(1.0f);
 			model = glm::translate(model, glm::vec3(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z));
-			model = glm::translate(model, glm::vec3(side_offset_v.x, side_offset_v.y, side_offset_v.z));
 			model = rotate * model;
-			model = glm::rotate(model, (float)90.0, glm::vec3(0, 1, 0));
+			model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0));
 			model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
 
-			unsigned int r = 89;
-			unsigned int g = 58;
-			unsigned int b = 5;
-
 			current_light_shader->setMat4("model", model);
-			my_track->Draw(*current_light_shader);
-
-			//glBegin(GL_TRIANGLES);
-			//for (int i = 0; i < my_track.vertices.size(); ++i) {
-
-			//	glm::vec4 vec(my_track.vertices[i].x, my_track.vertices[i].y, my_track.vertices[i].z, 1.0f);
-
-			//	glNormal3d(my_track.normals[i].x, my_track.normals[i].y, my_track.normals[i].z);
-			//	glVertex3f(vec.x, vec.y, vec.z);
-
-			//}
-			//glEnd();
-			//glPopMatrix();
+			my_car->Draw(*current_light_shader);
 		}
-		glLineWidth(1);
 	}
+	glUseProgram(0);
 }
 
-void TrainView::drawTeapot() {
+void TrainView::draw_terrain() {
+	current_light_shader->use();
 
 	// world transformation
+	float scale_value = 10.0;
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(100, 100, 0));
-	model = glm::scale(model, glm::vec3(10, 10, 10));
-	current_light_shader->setMat4("model", model);
+	model = glm::translate(model, glm::vec3(0,-50,0));
+	model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
 
-	teapot->Draw(*current_light_shader);
+	current_light_shader->setMat4("model", model);
+	my_terrain->Draw(*current_light_shader);
+	glUseProgram(0);
 }
 
 void TrainView::drawWater(int mode) {
 	glm::mat4 model = glm::mat4(1.0);
-	model = glm::translate(model, glm::vec3(0, 10, 0));
-	model = glm::scale(model, glm::vec3(10,1,10));
+	model = glm::translate(model, glm::vec3(0, 0, 100));
+	model = glm::scale(model, glm::vec3(12,1,14));
 
 	waterMesh->setEyePos(camera.Position);
 	waterMesh->setMVP(model, viewMatrix, projectionMatrix);
@@ -923,29 +922,52 @@ void TrainView::drawWater(int mode) {
 	waterMesh->waveLength_coefficient = tw->waterWaveLength->value();
 	waterMesh->speed_coefficient = tw->waterSpeed->value();
 
-	if (mode == 3) {
-		if (firstDraw) {
-			updateInteractiveHeightMapFBO(0);
-			updateInteractiveHeightMapFBO(0);
-			firstDraw = false;
-		}
-		else {
-			updateInteractiveHeightMapFBO(2);
-		}
-		
-		
-		if (currentFBO == 0) {
-			waterMesh->interactiveTexId = interactiveHeightMapFBO0->getColorId();
-		}
-		else {
-			waterMesh->interactiveTexId = interactiveHeightMapFBO1->getColorId();
-		}
-		mainFBO->bind();
-	}
+	//if (mode == 3) {
+	//	if (firstDraw) {
+	//		updateInteractiveHeightMapFBO(0);
+	//		updateInteractiveHeightMapFBO(0);
+	//		firstDraw = false;
+	//	}
+	//	else {
+	//		updateInteractiveHeightMapFBO(2);
+	//	}
+	//	
+	//	
+	//	if (currentFBO == 0) {
+	//		waterMesh->interactiveTexId = interactiveHeightMapFBO0->getColorId();
+	//	}
+	//	else {
+	//		waterMesh->interactiveTexId = interactiveHeightMapFBO1->getColorId();
+	//	}
+	//	mainFBO->bind();
+	//}
 
 	waterMesh->draw(mode);
 	glUseProgram(0);
 }
+
+void TrainView::drawTeapot() {
+	current_light_shader->use();
+	float scale_value = 10.0;
+	// world transformation
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(100, 100, 0));
+	model = glm::scale(model, glm::vec3(scale_value));
+	current_light_shader->setMat4("model", model);
+
+	teapot->Draw(*current_light_shader);
+	glUseProgram(0);
+}
+
+void TrainView::drawTrees() {
+	current_light_shader->use();
+	for (int i = 0; i < my_trees.size(); ++i) {
+		current_light_shader->setMat4("model", my_trees[i].model_matrix);
+		my_trees[i].model->Draw(*current_light_shader);
+	}
+	glUseProgram(0);
+}
+
 
 void TrainView::drawSkyBox() {
 	glm::mat4 model = glm::mat4(1.0);
@@ -991,11 +1013,34 @@ void TrainView::loadModels() {
 	if (!my_track) {
 		my_track = new Model(FileSystem::getPath("resources/objects/track/track.obj"));
 	}
+	if (!my_sleeper) {
+		my_sleeper = new Model(FileSystem::getPath("resources/objects/sleeper/sleeper.obj"));
+	}
 	if (!sci_fi_train) {
 		sci_fi_train = new Model(FileSystem::getPath("resources/objects/Sci_fi_Train/Sci_fi_Train.obj"));
 	}
+	if (!my_car) {
+		//my_car = new Model(FileSystem::getPath("resources/objects/train_car/train_car.obj"));
+		my_car = new Model(FileSystem::getPath("resources/objects/planet/planet.obj"));
+	}
 	if (!teapot) {
 		teapot = new Model(FileSystem::getPath("resources/objects/teapot/teapot.obj"));
+	}
+	if (!my_terrain) {
+		my_terrain = new Model(FileSystem::getPath("resources/objects/terrain/terrain.obj"));
+	}
+	if (initTree) {
+		initTree = false;
+		Tree temp_tree(FileSystem::getPath("resources/objects/tree1/JASMIM+MANGA.obj"));
+		my_trees.push_back(temp_tree);
+		my_trees[0].pos = glm::vec3(0, 200, 0);
+		my_trees[0].update_modelMatrix();
+		my_trees.push_back(temp_tree);
+		my_trees[1].pos = glm::vec3(50, 100, 0);
+		my_trees[1].update_modelMatrix();
+		my_trees.push_back(temp_tree);
+		my_trees[2].pos = glm::vec3(-100, 100, 0);
+		my_trees[2].update_modelMatrix();
 	}
 }
 
@@ -1479,4 +1524,141 @@ void TrainView::match_length() {
 void TrainView::match_trainU() {
 	int index = trainU_index();
 	m_pTrack->C_length = accumulate_length[index];
+}
+
+//initialize openAL stuff
+void TrainView::initSound() {
+	if (!this->device) {
+		this->device = alcOpenDevice(NULL);
+		if (!this->device) {
+			puts("ERROR::NO_AUDIO_DEVICE");
+		}
+		ALboolean enumeration = alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT");
+		this->context = alcCreateContext(this->device, NULL);
+		if (!alcMakeContextCurrent(context))
+			puts("Failed to make context current");
+		this->source_pos = glm::vec3(0.0f, 0.0f, 0.0f);
+		ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
+		alListener3f(AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
+		alListener3f(AL_VELOCITY, 0, 0, 0);
+		alListenerfv(AL_ORIENTATION, listenerOri);
+		alGenSources((ALuint)1, &this->source);
+		alSourcef(this->source, AL_PITCH, 1);
+		alSourcef(this->source, AL_GAIN, 1.0f);
+		alSource3f(this->source, AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
+		alSource3f(this->source, AL_VELOCITY, 0, 0, 0);
+		alSourcei(this->source, AL_LOOPING, AL_TRUE);
+		alGenBuffers((ALuint)1, &this->buffer);
+		ALsizei size, freq;
+		ALenum format;
+		ALvoid* data;
+		ALboolean loop = AL_TRUE;
+		//Material from: ThinMatrix
+		//alutLoadWAVFile((ALbyte*)"../resources/audio/YOASOBI.wav", &format, &data, &size, &freq, &loop);
+		alutLoadWAVFile((ALbyte*)"../resources/audio/none.wav", &format, &data, &size, &freq, &loop);
+		alBufferData(this->buffer, format, data, size, freq);
+		alSourcei(this->source, AL_BUFFER, this->buffer);
+		if (format == AL_FORMAT_STEREO16 || format == AL_FORMAT_STEREO8)
+			puts("TYPE::STEREO");
+		else if (format == AL_FORMAT_MONO16 || format == AL_FORMAT_MONO8)
+			puts("TYPE::MONO");
+		alSourcef(source, AL_GAIN, 0.1);
+		alSourcePlay(this->source);
+	}
+}
+
+//initialize UBO
+void TrainView::initUBO() {
+	if (!this->commom_matrices) {
+		this->commom_matrices = new UBO();
+		this->commom_matrices->size = 2 * sizeof(glm::mat4);
+		glGenBuffers(1, &this->commom_matrices->ubo);
+		glBindBuffer(GL_UNIFORM_BUFFER, this->commom_matrices->ubo);
+		glBufferData(GL_UNIFORM_BUFFER, this->commom_matrices->size, NULL, GL_STATIC_DRAW);
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	}
+}
+
+//intialize plane vao
+void TrainView::initPlane() {
+	if (!this->plane) {
+		GLfloat  vertices[] = {
+			-0.5f ,0.0f , -0.5f,
+			-0.5f ,0.0f , 0.5f ,
+			0.5f ,0.0f ,0.5f ,
+			0.5f ,0.0f ,-0.5f };
+		GLfloat  normal[] = {
+			0.0f, 1.0f, 0.0f,
+			0.0f, 1.0f, 0.0f,
+			0.0f, 1.0f, 0.0f,
+			0.0f, 1.0f, 0.0f };
+		GLfloat  texture_coordinate[] = {
+			0.0f, 0.0f,
+			1.0f, 0.0f,
+			1.0f, 1.0f,
+			0.0f, 1.0f };
+		GLuint element[] = {
+			0, 1, 2,
+			0, 2, 3, };
+
+		this->plane = new VAO;
+		this->plane->element_amount = sizeof(element) / sizeof(GLuint);
+		glGenVertexArrays(1, &this->plane->vao);
+		glGenBuffers(3, this->plane->vbo);
+		glGenBuffers(1, &this->plane->ebo);
+
+		glBindVertexArray(this->plane->vao);
+
+		// Position attribute
+		glBindBuffer(GL_ARRAY_BUFFER, this->plane->vbo[0]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(0);
+
+		// Normal attribute
+		glBindBuffer(GL_ARRAY_BUFFER, this->plane->vbo[1]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(normal), normal, GL_STATIC_DRAW);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(1);
+
+		// Texture Coordinate attribute
+		glBindBuffer(GL_ARRAY_BUFFER, this->plane->vbo[2]);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(texture_coordinate), texture_coordinate, GL_STATIC_DRAW);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(2);
+
+		//Element attribute
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->plane->ebo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(element), element, GL_STATIC_DRAW);
+
+		// Unbind VAO
+		glBindVertexArray(0);
+	}
+}
+
+void TrainView::updateListenerPos() {
+	if (selectedCube >= 0)
+		alListener3f(AL_POSITION,
+			m_pTrack->points[selectedCube].pos.x,
+			m_pTrack->points[selectedCube].pos.y,
+			m_pTrack->points[selectedCube].pos.z);
+	else
+		alListener3f(AL_POSITION,
+			this->source_pos.x,
+			this->source_pos.y,
+			this->source_pos.z);
+}
+
+void TrainView::deleteSelectedObject() {
+	if (selectedTree >= 0 && !my_trees.empty()) {
+		my_trees.erase(my_trees.begin() + selectedTree);
+	}
+	//... other stuff
+}
+
+void TrainView::addTree() {
+	Tree temp_tree(FileSystem::getPath("resources/objects/tree1/JASMIM+MANGA.obj"));
+	my_trees.push_back(temp_tree);
+	my_trees.back().pos = glm::vec3(0, 200, 0);
+	my_trees.back().update_modelMatrix();
 }

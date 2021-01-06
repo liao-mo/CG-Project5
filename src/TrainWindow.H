@@ -89,6 +89,15 @@ class TrainWindow : public Fl_Double_Window {
 		Fl_Button* FPV;
 		Fl_Button* TPV;
 
+		//want to pick objects?
+		Fl_Button* pickObjects;
+
+		//Delete picked object
+		Fl_Button* deleteObjects;
+
+		//Add a new Tree
+		Fl_Button* AddTree;
+
 		// the type of the spline (use its value to determine)
 		Fl_Browser*			splineBrowser;
 
@@ -108,8 +117,6 @@ class TrainWindow : public Fl_Double_Window {
 
 		//wave type browser
 		Fl_Browser* waveTypeBrowser;
-		// the type of the track (use its value to determine)
-		Fl_Browser* trackBrowser;
 
 		////do pixelation
 		//Fl_Button* pixelation;
