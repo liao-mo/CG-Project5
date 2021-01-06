@@ -288,66 +288,40 @@ void TrainView::draw()
 		loadTextures();
 		
 		if (!this->device){
-			//Tutorial: https://ffainelli.github.io/openal-example/
 			this->device = alcOpenDevice(NULL);
 			if (!this->device) {
-				//puts("ERROR::NO_AUDIO_DEVICE");
+				puts("ERROR::NO_AUDIO_DEVICE");
 			}
-				
-
 			ALboolean enumeration = alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT");
-			if (enumeration == AL_FALSE) {
-				//puts("Enumeration not supported");
-			}
-			else {
-				//puts("Enumeration supported");
-			}
-
 			this->context = alcCreateContext(this->device, NULL);
 			if (!alcMakeContextCurrent(context))
 				puts("Failed to make context current");
-
-			this->source_pos = glm::vec3(0.0f, 5.0f, 0.0f);
-
+			this->source_pos = glm::vec3(0.0f, 0.0f, 0.0f);
 			ALfloat listenerOri[] = { 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f };
 			alListener3f(AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
 			alListener3f(AL_VELOCITY, 0, 0, 0);
 			alListenerfv(AL_ORIENTATION, listenerOri);
-
 			alGenSources((ALuint)1, &this->source);
 			alSourcef(this->source, AL_PITCH, 1);
 			alSourcef(this->source, AL_GAIN, 1.0f);
 			alSource3f(this->source, AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
 			alSource3f(this->source, AL_VELOCITY, 0, 0, 0);
 			alSourcei(this->source, AL_LOOPING, AL_TRUE);
-
 			alGenBuffers((ALuint)1, &this->buffer);
-
 			ALsizei size, freq;
 			ALenum format;
 			ALvoid* data;
 			ALboolean loop = AL_TRUE;
-
 			//Material from: ThinMatrix
-			alutLoadWAVFile((ALbyte*)"../resources/audio/YOASOBI0.wav", &format, &data, &size, &freq, &loop);
+			alutLoadWAVFile((ALbyte*)"../resources/audio/none.wav", &format, &data, &size, &freq, &loop);
 			alBufferData(this->buffer, format, data, size, freq);
 			alSourcei(this->source, AL_BUFFER, this->buffer);
-
 			if (format == AL_FORMAT_STEREO16 || format == AL_FORMAT_STEREO8)
 				puts("TYPE::STEREO");
 			else if (format == AL_FORMAT_MONO16 || format == AL_FORMAT_MONO8)
 				puts("TYPE::MONO");
-
 			alSourcef(source, AL_GAIN, 0.1);
 			alSourcePlay(this->source);
-
-			// cleanup context
-			//alDeleteSources(1, &source);
-			//alDeleteBuffers(1, &buffer);
-			//device = alcGetContextsDevice(context);
-			//alcMakeContextCurrent(NULL);
-			//alcDestroyContext(context);
-			//alcCloseDevice(device);
 		}
 	}
 	else
@@ -356,7 +330,6 @@ void TrainView::draw()
 	// Set up the view port
 	glViewport(0,0,w(),h());
 	
-
 	// clear the window, be sure to clear the Z-Buffer too
 	glClearColor(0,0,.3f,0);		// background should be blue
 
@@ -374,6 +347,7 @@ void TrainView::draw()
 	glLoadIdentity();
 	
 	setProjection();		// put the code to set up matrices here
+	update_arcLengh();
 
 	// enable the lighting
 	glEnable(GL_COLOR_MATERIAL);
@@ -398,21 +372,13 @@ void TrainView::draw()
 	// set to opengl fixed pipeline(use opengl 1.x draw function)
 	glUseProgram(0);
 
-	setupFloor();
-	glDisable(GL_LIGHTING);
+	//setupFloor();
+	//glDisable(GL_LIGHTING);
 	//drawFloor(200,10);
 
 	//glEnable(GL_LIGHTING);
 	setupObjects();
-
 	drawStuff();
-
-	// this time drawing is for shadows (except for top view)
-	//if (!tw->topCam->value()) {
-	//	setupShadows();
-	//	//drawStuff(true);
-	//	unsetupShadows();
-	//}
 
 	//use shader===========================================================================================================
 
@@ -435,7 +401,8 @@ void TrainView::draw()
 
 	//drawTeapot();
 	
-	drawWater(tw->waveTypeBrowser->value());
+	//drawWater(tw->waveTypeBrowser->value());
+	draw_track();
 
 	drawSkyBox();
 
@@ -460,7 +427,7 @@ setProjection()
 	glUseProgram(0);
 	// Compute the aspect ratio (we'll need it)
 	float aspect = static_cast<float>(w()) / static_cast<float>(h());
-	projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, (float)NEAR, (float)FAR);
+	projectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float)w() / (float)h(), (float)NEAR, (float)FAR);
 
 	// Check whether we use the world camp
 	if (tw->worldCam->value()) {
@@ -505,13 +472,80 @@ setProjection()
 		glLoadIdentity();
 		glRotatef(-90,1,0,0);
 	} 
-	// Or do the train view or other view here
-	//####################################################################
-	// TODO: 
 	// put code for train view projection here!	
-	//####################################################################
 	else {
+		size_t i;
+		if (tw->arcLength->value() == 0) {
+			i = trainU_index();
+		}
+		else {
+			i = C_length_index();
+		}
+		float t0 = t_param[i];
 
+		glm::vec3 qt0_v = all_qt[i];
+		glm::vec3 qt1_v;
+		if (i == t_param.size() - 1) qt1_v = all_qt[0];
+		else qt1_v = all_qt[i + 1];
+
+		glm::vec3 orient_t0_v = all_orient[i];
+		glm::vec3 forward = all_forward[i];
+
+
+		float FPV_up_value = 10.0f;
+		float TPV_up_value = 20.0f;
+		float TPV_backward_value = 30.0f;
+
+		glm::vec4 eye(qt0_v.x, qt0_v.y, qt0_v.z, 1);
+		glm::vec4 center(qt0_v.x + forward.x, qt0_v.y + forward.y, qt0_v.z + forward.z, 1);
+		glm::vec3 offset0(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+		glm::mat4 trans = glm::mat4(1.0f);
+
+		if (tw->FPV->value() == 1) {
+			trans = glm::translate(trans, FPV_up_value * offset0);
+			eye = trans * eye;
+
+			center = trans * center;
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			gluPerspective(120, 1, 1, 1000);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			gluLookAt(
+				eye.x,
+				eye.y,
+				eye.z,
+				center.x,
+				center.y,
+				center.z,
+				orient_t0_v.x,
+				orient_t0_v.y,
+				orient_t0_v.z
+			);
+		}
+		else if (tw->TPV->value() == 1) {
+			trans = glm::translate(trans, TPV_up_value * offset0);
+			trans = glm::translate(trans, TPV_backward_value * -forward);
+			eye = trans * eye;
+
+			center = trans * center;
+			glMatrixMode(GL_PROJECTION);
+			glLoadIdentity();
+			gluPerspective(120, 1, 1, 1000);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			gluLookAt(
+				eye.x,
+				eye.y,
+				eye.z,
+				center.x,
+				center.y,
+				center.z,
+				orient_t0_v.x,
+				orient_t0_v.y,
+				orient_t0_v.z
+			);
+		}
 	}
 }
 
@@ -534,19 +568,6 @@ void TrainView::drawStuff(bool doingShadows)
 			m_pTrack->points[i].draw();
 		}
 	}
-	// draw the track
-	//####################################################################
-	// TODO: 
-	// call your own track drawing code
-	//####################################################################
-
-
-	// draw the train
-	//####################################################################
-	// TODO: 
-	//	call your own train drawing code
-	//####################################################################
-
 }
 
 void TrainView::
@@ -755,6 +776,129 @@ void TrainView::drawGround() {
 	ground_texture->unbind(0);
 }
 
+void TrainView::draw_track() {
+	//draw track with respect to my t_param and qt vectors data
+	for (int i = 0; i < t_param.size(); ++i) {
+		glm::vec3 qt0_v = all_qt[i];
+		glm::vec3 qt1_v;
+		if (i == t_param.size() - 1) qt1_v = all_qt[0];
+		else qt1_v = all_qt[i + 1];
+
+		glm::vec3 orient_t0_v = all_orient[i];
+		glm::vec3 forward = all_forward[i];
+
+		glm::vec3 offset_vec1 = glm::cross(forward, orient_t0_v);
+		offset_vec1 = glm::normalize(offset_vec1);
+		offset_vec1 *= 1.5 * DIVIDE_LINE / 100;
+		glm::vec3 offset_vec2 = 1.5f * offset_vec1;
+
+
+		glm::vec3 left_track0 = qt0_v + offset_vec1;
+		glm::vec3 left_track1 = qt1_v + offset_vec1;
+		glm::vec3 left_track2 = qt1_v + offset_vec2;
+		glm::vec3 left_track3 = qt0_v + offset_vec2;
+		glm::vec3 right_track0 = qt0_v - offset_vec1;
+		glm::vec3 right_track1 = qt1_v - offset_vec1;
+		glm::vec3 right_track2 = qt1_v - offset_vec2;
+		glm::vec3 right_track3 = qt0_v - offset_vec2;
+
+		glLineWidth(5);
+
+		//draw selected track type
+		if (tw->trackBrowser->value() == 1) {
+			//single track
+			glBegin(GL_LINES);
+			glVertex3f(qt0_v.x, qt0_v.y, qt0_v.z);
+			glVertex3f(qt1_v.x, qt1_v.y, qt1_v.z);
+			glEnd();
+		}
+		else if (tw->trackBrowser->value() == 2) {
+			//left track
+			glBegin(GL_POLYGON);
+			unsigned r = 50;
+			unsigned g = 50;
+			unsigned b = 50;
+			glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+			glVertex3f(left_track0.x, left_track0.y, left_track0.z);
+			glVertex3f(left_track1.x, left_track1.y, left_track1.z);
+			glVertex3f(left_track2.x, left_track2.y, left_track2.z);
+			glVertex3f(left_track3.x, left_track3.y, left_track3.z);
+			glEnd();
+
+			//right track
+			glBegin(GL_POLYGON);
+			glNormal3d(orient_t0_v.x, orient_t0_v.y, orient_t0_v.z);
+			glVertex3f(right_track0.x, right_track0.y, right_track0.z);
+			glVertex3f(right_track1.x, right_track1.y, right_track1.z);
+			glVertex3f(right_track2.x, right_track2.y, right_track2.z);
+			glVertex3f(right_track3.x, right_track3.y, right_track3.z);
+			glEnd();
+		}
+		else if (tw->trackBrowser->value() == 3) {
+			float scale_value = 0.5f;
+			glm::mat4 scale = glm::mat4(1.0f);
+			scale = glm::scale(scale, glm::vec3(scale_value, scale_value, scale_value));
+
+
+			mat4 rotate = glm::inverse(glm::lookAt(
+				qt0_v,
+				qt1_v,
+				orient_t0_v));
+			float rotateArray2[16] = { 0.0 };
+			const float* pSource2 = (const float*)glm::value_ptr(rotate);
+			for (int i = 0; i < 16; ++i)
+				rotateArray2[i] = pSource2[i];
+
+			float up_offset = -0.3f;
+			glm::vec3 side_offset_v = glm::cross(forward, orient_t0_v);
+			side_offset_v = glm::normalize(side_offset_v);
+			side_offset_v *= 1.5f;
+
+			//glm::mat4 trans = glm::mat4(1.0f);
+			//trans = glm::translate(trans, qt0_v);
+			//trans = glm::translate(trans, up_offset * orient_t0_v);
+			//trans = glm::translate(trans, side_offset_v*1.0f);
+
+
+			//glPushMatrix();
+			//glTranslated(qt0_v.x, qt0_v.y, qt0_v.z);
+			//glTranslated(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z);
+			//glTranslated(side_offset_v.x, side_offset_v.y,side_offset_v.z);
+			//glMultMatrixf(rotateArray2);
+			//glRotatef(90.0f, 0, 1, 0);
+			//glScalef(scale_value, scale_value, scale_value);
+
+			// world transformation
+			glm::mat4 model = glm::mat4(1.0f);
+			model = glm::translate(model, glm::vec3(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z));
+			model = glm::translate(model, glm::vec3(side_offset_v.x, side_offset_v.y, side_offset_v.z));
+			model = rotate * model;
+			model = glm::rotate(model, (float)90.0, glm::vec3(0, 1, 0));
+			model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
+
+			unsigned int r = 89;
+			unsigned int g = 58;
+			unsigned int b = 5;
+
+			current_light_shader->setMat4("model", model);
+			my_track->Draw(*current_light_shader);
+
+			//glBegin(GL_TRIANGLES);
+			//for (int i = 0; i < my_track.vertices.size(); ++i) {
+
+			//	glm::vec4 vec(my_track.vertices[i].x, my_track.vertices[i].y, my_track.vertices[i].z, 1.0f);
+
+			//	glNormal3d(my_track.normals[i].x, my_track.normals[i].y, my_track.normals[i].z);
+			//	glVertex3f(vec.x, vec.y, vec.z);
+
+			//}
+			//glEnd();
+			//glPopMatrix();
+		}
+		glLineWidth(1);
+	}
+}
+
 void TrainView::drawTeapot() {
 
 	// world transformation
@@ -844,6 +988,9 @@ void TrainView::loadShaders() {
 }
 
 void TrainView::loadModels() {
+	if (!my_track) {
+		my_track = new Model(FileSystem::getPath("resources/objects/track/track.obj"));
+	}
 	if (!sci_fi_train) {
 		sci_fi_train = new Model(FileSystem::getPath("resources/objects/Sci_fi_Train/Sci_fi_Train.obj"));
 	}

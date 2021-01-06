@@ -85,6 +85,10 @@ class TrainWindow : public Fl_Double_Window {
 		Fl_Button*			trainCam;
 		Fl_Button*			topCam;
 
+		// which type of view to follow the train
+		Fl_Button* FPV;
+		Fl_Button* TPV;
+
 		// the type of the spline (use its value to determine)
 		Fl_Browser*			splineBrowser;
 

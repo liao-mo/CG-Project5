@@ -92,8 +92,24 @@ TrainWindow(const int x, const int y)
 
 		pty += 30;
 
+		// FPV buttons - in a radio button group
+		Fl_Group* FPVGroup = new Fl_Group(600, pty, 195, 20);
+		FPVGroup->begin();
+		FPV = new Fl_Button(605, pty, 60, 20, "FPV");
+		FPV->type(FL_RADIO_BUTTON);		// radio button
+		FPV->value(1);			// turned on
+		FPV->selection_color((Fl_Color)3); // yellow when pressed
+		FPV->callback((Fl_Callback*)damageCB, this);
+		TPV = new Fl_Button(670, pty, 60, 20, "TPV");
+		TPV->type(FL_RADIO_BUTTON);
+		TPV->value(0);
+		TPV->selection_color((Fl_Color)3);
+		TPV->callback((Fl_Callback*)damageCB, this);
+		FPVGroup->end();
+
+		pty += 30;
+
 		// browser to select spline types
-		// TODO: make sure these choices are the same as what the code supports
 		splineBrowser = new Fl_Browser(605,pty,120,75,"Spline Type");
 		splineBrowser->type(2);		// select
 		splineBrowser->callback((Fl_Callback*)damageCB,this);

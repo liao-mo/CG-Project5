@@ -72,7 +72,7 @@ class TrainView : public Fl_Gl_Window
 		void draw_car(bool doingShadows, float backward_offset);
 
 		//my function that draws the track
-		void draw_track(bool doingShadows);
+		void draw_track();
 
 		//my function that draws the sleeper
 		void draw_sleeper(bool doingShadows);
@@ -175,6 +175,12 @@ class TrainView : public Fl_Gl_Window
 		//models
 		Model* sci_fi_train = nullptr;
 		Model* teapot = nullptr;
+		Model* my_sleeper = nullptr;			
+		Model* my_track = nullptr;			
+		Model* my_car = nullptr;				
+		Model* my_terrain = nullptr;				
+		std::vector<Model*> scene_models; 
+		unsigned int num_of_car;
 		void loadModels();
 		void drawTeapot();
 
@@ -222,13 +228,7 @@ class TrainView : public Fl_Gl_Window
 		glm::mat4 projectionMatrix;
 
 
-		Model* my_train = nullptr;			//my train model
-		Model* my_sleeper = nullptr;			//my train model
-		Model* my_track = nullptr;			//my train model
-		Model* my_car = nullptr;				//my car model
-		Model* my_ground = nullptr;				//my car model
-		std::vector<Model*> scene_models; //all other static models
-		unsigned int num_of_car;
+
 
 		//find 4 control point around current point
 		std::vector<Pnt3f> find_Cpoints(int currentPoint);
