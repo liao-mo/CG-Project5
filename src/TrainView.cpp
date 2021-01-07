@@ -1,6 +1,10 @@
 #include <iostream>
-#include <Fl/fl.h>
+#include <fstream>
+#include <vector>
+#include <sstream>
+#include <string>
 
+#include <Fl/fl.h>
 // we will need OpenGL, and OpenGL needs windows.h
 #include <windows.h>
 //#include "GL/gl.h"
@@ -25,9 +29,6 @@
 #include "Utilities/Matrices.h"
 #include "Utilities/objloader.hpp"
 #include "My_functions.H"
-#include <vector> 
-
-
 
 // Constructor to set up the GL window
 TrainView::
@@ -122,7 +123,7 @@ int TrainView::handle(int event)
 		}
 		// Compute the new tree position
 		if ((last_push == FL_LEFT_MOUSE) && (selectedTree >= 0)) {
-			Tree* alter_tree = &my_trees[selectedTree];
+			Base_Object* alter_tree = &my_trees[selectedTree];
 
 			double r1x, r1y, r1z, r2x, r2y, r2z;
 			getMouseLine(r1x, r1y, r1z, r2x, r2y, r2z);
@@ -311,6 +312,8 @@ void TrainView::draw()
 	//drawTeapot();
 
 	drawTrees();
+
+	drawTitans();
 	
 	draw_track();
 
@@ -322,7 +325,7 @@ void TrainView::draw()
 
 	draw_terrain();
 
-	drawWater(tw->waveTypeBrowser->value());
+	//drawWater(tw->waveTypeBrowser->value());
 
 	drawSkyBox();
 
@@ -968,6 +971,14 @@ void TrainView::drawTrees() {
 	glUseProgram(0);
 }
 
+void TrainView::drawTitans() {
+	current_light_shader->use();
+	for (int i = 0; i < my_titans.size(); ++i) {
+		current_light_shader->setMat4("model", my_titans[i].model_matrix);
+		my_titans[i].model->Draw(*current_light_shader);
+	}
+	glUseProgram(0);
+}
 
 void TrainView::drawSkyBox() {
 	glm::mat4 model = glm::mat4(1.0);
@@ -1011,37 +1022,86 @@ void TrainView::loadShaders() {
 
 void TrainView::loadModels() {
 	if (!my_track) {
+		cout << "loading track..." << endl;
 		my_track = new Model(FileSystem::getPath("resources/objects/track/track.obj"));
 	}
 	if (!my_sleeper) {
+		cout << "loading sleeper..." << endl;
 		my_sleeper = new Model(FileSystem::getPath("resources/objects/sleeper/sleeper.obj"));
 	}
 	if (!sci_fi_train) {
+		cout << "loading train..." << endl;
 		sci_fi_train = new Model(FileSystem::getPath("resources/objects/Sci_fi_Train/Sci_fi_Train.obj"));
 	}
 	if (!my_car) {
+		cout << "loading train car..." << endl;
 		//my_car = new Model(FileSystem::getPath("resources/objects/train_car/train_car.obj"));
 		my_car = new Model(FileSystem::getPath("resources/objects/planet/planet.obj"));
 	}
 	if (!teapot) {
+		cout << "loading teapot..." << endl;
 		teapot = new Model(FileSystem::getPath("resources/objects/teapot/teapot.obj"));
 	}
 	if (!my_terrain) {
+		cout << "loading terrain..." << endl;
 		my_terrain = new Model(FileSystem::getPath("resources/objects/terrain/terrain.obj"));
 	}
 	if (initTree) {
 		initTree = false;
-		Tree temp_tree(FileSystem::getPath("resources/objects/tree1/JASMIM+MANGA.obj"));
-		my_trees.push_back(temp_tree);
-		my_trees[0].pos = glm::vec3(0, 200, 0);
-		my_trees[0].update_modelMatrix();
-		my_trees.push_back(temp_tree);
-		my_trees[1].pos = glm::vec3(50, 100, 0);
-		my_trees[1].update_modelMatrix();
-		my_trees.push_back(temp_tree);
-		my_trees[2].pos = glm::vec3(-100, 100, 0);
-		my_trees[2].update_modelMatrix();
+		loadTrees();
+
 	}
+	if (initTitan) {
+		initTitan = false;
+		//Base_Object temp_titan1(FileSystem::getPath("resources/objects/titan/chou/chou.obj"));
+		//Base_Object temp_titan2(FileSystem::getPath("resources/objects/titan/tsai/tsai.obj"));
+		//my_titans.push_back(temp_titan1);
+		//my_titans.back().pos = glm::vec3(0, 20, 0);
+		//my_titans.back().scaleVal = glm::vec3(30.0);
+		//my_titans.back().update_modelMatrix();
+
+		//my_titans.push_back(temp_titan2);
+		//my_titans.back().pos = glm::vec3(100, 20, 0);
+		//my_titans.back().scaleVal = glm::vec3(30.0);
+		//my_titans.back().update_modelMatrix();
+	}
+}
+
+void TrainView::loadTrees() {
+	fstream tree_file("../src/tree_pos.txt");
+	if (!tree_file) cout << "tree file error" << endl;
+	cout << "loading tree1..." << endl;
+	Base_Object temp_tree1(FileSystem::getPath("resources/objects/tree1/JASMIM+MANGA.obj"));
+	cout << "loading tree2..." << endl;
+	Base_Object temp_tree2(FileSystem::getPath("resources/objects/tree2/tree2.obj"));
+	cout << "all trees loaded" << endl;
+
+	string line;
+	while (getline(tree_file, line)) {
+		if (line[0] == '#') continue;
+		stringstream ss(line);
+
+		int tree_type;
+		ss >> tree_type;
+		if (tree_type == 1) {
+			my_trees.push_back(temp_tree1);
+		}
+		else if (tree_type == 2) {
+			my_trees.push_back(temp_tree2);
+		}
+
+		ss >> my_trees.back().pos.x >> my_trees.back().pos.y >> my_trees.back().pos.z;
+		float scale;
+		ss >> scale;
+		my_trees.back().scaleVal = glm::vec3(scale);
+		ss >> my_trees.back().rotation_angle >> my_trees.back().rotation_axis.x >> my_trees.back().rotation_axis.y >> my_trees.back().rotation_axis.z;
+		my_trees.back().update_modelMatrix();
+	}
+
+	my_trees.push_back(temp_tree1);
+	my_trees.back().pos = vec3(0, 0, 0);
+	my_trees.back().scaleVal = glm::vec3(10);
+	my_trees.back().update_modelMatrix();
 }
 
 void TrainView::loadTextures() {
@@ -1053,7 +1113,7 @@ void TrainView::loadTextures() {
 
 void TrainView::loadWaterMesh() {
 	if (!waterMesh) {
-		waterMesh = new WaterMesh(glm::vec3(0.0, 20.0, 0.0));
+		//waterMesh = new WaterMesh(glm::vec3(0.0, 20.0, 0.0));
 	}
 }
 
@@ -1657,8 +1717,9 @@ void TrainView::deleteSelectedObject() {
 }
 
 void TrainView::addTree() {
-	Tree temp_tree(FileSystem::getPath("resources/objects/tree1/JASMIM+MANGA.obj"));
+	Base_Object temp_tree(FileSystem::getPath("resources/objects/tree1/JASMIM+MANGA.obj"));
 	my_trees.push_back(temp_tree);
 	my_trees.back().pos = glm::vec3(0, 200, 0);
 	my_trees.back().update_modelMatrix();
 }
+

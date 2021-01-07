@@ -184,14 +184,18 @@ class TrainView : public Fl_Gl_Window
 		Model* my_track = nullptr;			
 		Model* my_car = nullptr;				
 		Model* my_terrain = nullptr;	
-		vector<Tree> my_trees;
+		vector<Base_Object> my_trees;
+		vector<Base_Object> my_titans;
 		std::vector<Model*> scene_models;
 		unsigned int num_of_car;
 		bool initTree = true;
+		bool initTitan = true;
 		void loadModels();
+		void loadTrees();
 		void drawTeapot();
 		void drawTrees();
 		void addTree();
+		void drawTitans();
 		void deleteSelectedObject();
 
 		//water

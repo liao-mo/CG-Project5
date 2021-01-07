@@ -1,0 +1,32 @@
+# Blender MTL File: 'None'
+# Material Count: 2
+
+newmtl bark.003
+Ns 287.999996
+Ka 0.140000 0.140000 0.140000
+Kd 0.800000 0.800000 0.800000
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Bump -o 0.000000 -1.000000 0.000000 barkNormal.png
+map_Kd -o 0.000000 -1.000000 0.000000 barkColor.png
+map_Ks -o 0.000000 -1.000000 0.000000 barkspecular.png
+refl -o 0.000000 -1.000000 0.000000 barkspecular.png
+
+newmtl leaves.002
+Ns 287.999996
+Ka 0.130000 0.130000 0.130000
+Kd 0.800000 0.800000 0.800000
+Ks 1.000000 1.000000 1.000000
+Ke 1.000000 1.000000 1.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Bump -o 0.000000 -1.000000 0.000000 leafclusterNormal.png
+map_Kd -o 0.000000 -1.000000 0.000000 leafclustercolor.png
+map_Ke -o 0.000000 -1.000000 0.000000 leafclustertranslu.png
+map_Ks -o 0.000000 -1.000000 0.000000 leafclustespecular.png
+map_d -o 0.000000 -1.000000 0.000000 leafclustercolor.png
+refl -o 0.000000 -1.000000 0.000000 leafclustespecular.png
