@@ -26,6 +26,7 @@
 #define NEAR 0.01
 #define FAR 99999.0
 #define DIVIDE_LINE 100
+#define NR_LIGHT 9
 
 const int TEXTURE_WIDTH = 1920;  // NOTE: texture size cannot be larger than
 const int TEXTURE_HEIGHT = 1080;  // the rendering window size in non-FBO mode
@@ -136,10 +137,7 @@ class TrainView : public Fl_Gl_Window
 		CTrack*			m_pTrack;		// The track of the entire scene
 
 		//shader objects
-		Shader* current_light_shader = nullptr;
-		Shader* directional_light_shader = nullptr;
-		Shader* point_light_shader = nullptr;
-		Shader* spot_light_shader = nullptr;
+		Shader* standard_shader = nullptr;
 		Shader* light_source_shader = nullptr;
 		Shader* mainScreen_shader = nullptr;
 		Shader* subScreen_shader = nullptr;
@@ -177,6 +175,10 @@ class TrainView : public Fl_Gl_Window
 		void initUBO();
 		void initPlane();
 
+		//light source
+		Light_Source light_sources[9];
+		void initLightSource();
+
 		//models
 		Model* sci_fi_train = nullptr;
 		Model* teapot = nullptr;
@@ -186,16 +188,19 @@ class TrainView : public Fl_Gl_Window
 		Model* my_terrain = nullptr;	
 		vector<Base_Object> my_trees;
 		vector<Base_Object> my_titans;
+		vector<Light_object> my_light_objects;
 		std::vector<Model*> scene_models;
 		unsigned int num_of_car;
 		bool initTree = true;
 		bool initTitan = true;
+		bool initLightObject = true;
 		void loadModels();
 		void loadTrees();
 		void drawTeapot();
 		void drawTrees();
 		void addTree();
 		void drawTitans();
+		void drawLightObjects();
 		void deleteSelectedObject();
 
 		//water

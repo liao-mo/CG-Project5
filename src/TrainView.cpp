@@ -44,6 +44,7 @@ TrainView(int x, int y, int w, int h, const char* l) :
 	camera.Position = glm::vec3(50.0, 100.0, 0.0);
 	old_t = glutGet(GLUT_ELAPSED_TIME);
 	k_pressed = false;
+	initLightSource();
 }
 
 // * Reset the camera to look at the world
@@ -67,11 +68,8 @@ int TrainView::handle(int event)
 		
 	}
 
-
 	// remember what button was used
 	static int last_push;
-	
-
 	switch (event) {
 		// Mouse button being pushed event
 	case FL_PUSH:
@@ -159,7 +157,7 @@ int TrainView::handle(int event)
 			lastX = xpos;
 			lastY = ypos;
 
-			if (tw->fpv->value()) {
+			if (tw->fpv->value() || tw->trainCam->value()) {
 				camera.ProcessMouseMovement(xoffset, yoffset);
 			}
 
@@ -323,6 +321,8 @@ void TrainView::draw()
 
 	draw_cars();
 
+	drawLightObjects();
+
 	draw_terrain();
 
 	//drawWater(tw->waveTypeBrowser->value());
@@ -410,9 +410,9 @@ setProjection()
 		glm::vec3 forward = all_forward[i];
 
 
-		float FPV_up_value = 10.0f;
-		float TPV_up_value = 20.0f;
-		float TPV_backward_value = 30.0f;
+		float FPV_up_value = 20.0f;
+		float TPV_up_value = 15.0f;
+		float TPV_backward_value = 70.0f;
 
 		glm::vec4 eye(qt0_v.x, qt0_v.y, qt0_v.z, 1);
 		glm::vec4 center(qt0_v.x + forward.x, qt0_v.y + forward.y, qt0_v.z + forward.z, 1);
@@ -443,6 +443,13 @@ setProjection()
 				glm::vec3(eye.x,eye.y,eye.z),
 				glm::vec3(center.x,center.y,center.z),
 				glm::vec3(orient_t0_v.x,orient_t0_v.y,orient_t0_v.z));
+
+			float upOffset = 5.0f;
+			camera.Position = glm::vec3(eye.x, eye.y + upOffset, eye.z);
+			glMatrixMode(GL_MODELVIEW);
+			glLoadIdentity();
+			viewMatrix = camera.GetViewMatrix();
+			glMultMatrixf(&viewMatrix[0][0]);
 		}
 		else if (tw->TPV->value() == 1) {
 			trans = glm::translate(trans, TPV_up_value * offset0);
@@ -537,11 +544,11 @@ doPick()
 	}
 
 	if (tw->pickObjects->value()) {
-		current_light_shader->use();
+		standard_shader->use();
 		for (int i = 0; i < my_trees.size(); ++i) {
 			glLoadName((GLuint)(m_pTrack->points.size() + i + 1));
-			current_light_shader->setMat4("model", my_trees[i].model_matrix);
-			my_trees[i].model->Draw(*current_light_shader);
+			standard_shader->setMat4("model", my_trees[i].model_matrix);
+			my_trees[i].model->Draw(*standard_shader);
 		}
 		glUseProgram(0);
 	}
@@ -633,70 +640,43 @@ void TrainView::updata_camera() {
 }
 
 void TrainView::update_light_shaders() {
-	//set the selected lighting shader
-	if (tw->lightBrowser->value() == 1) {
-		current_light_shader = directional_light_shader;
-	}
-	else if (tw->lightBrowser->value() == 2) {
-		current_light_shader = point_light_shader;
-	}
-	else if (tw->lightBrowser->value() == 3) {
-		current_light_shader = spot_light_shader;
-	}
-	current_light_shader->use();
+	standard_shader->use();
+	standard_shader->setInt("material.diffuse", 0);
+	standard_shader->setInt("material.specular", 1);
+	standard_shader->setVec3("viewPos", camera.Position);
+	standard_shader->setFloat("material.shininess", 32.0f);
 
-	glm::mat4 model = glm::mat4(1.0f);
-
-	//directional light
-	if (tw->lightBrowser->value() == 1) {
-		directional_light_shader->use();
-		directional_light_shader->setVec3("light.direction", -1.0f, -0.1f, -0.3f);
-		directional_light_shader->setVec3("viewPos", camera.Position);
-		// light properties
-		directional_light_shader->setVec3("light.ambient", 0.1f, 0.1f, 0.1f);
-		directional_light_shader->setVec3("light.diffuse", 0.8f, 0.8f, 0.8f);
-		directional_light_shader->setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-		// material properties
-		directional_light_shader->setFloat("material.shininess", 32.0f);
-	}
-
-	//point light
-	if (tw->lightBrowser->value() == 2) {
-		point_light_shader->use();
-		glm::vec3 lightPos(35.0f, 100.0f, 2.0f);
-		point_light_shader->setVec3("light.position", lightPos);
-		point_light_shader->setVec3("viewPos", camera.Position);
-
-		// light properties
-		point_light_shader->setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-		point_light_shader->setVec3("light.diffuse", 0.9f, 0.9f, 0.9f);
-		point_light_shader->setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-		point_light_shader->setFloat("light.constant", 1.0f);
-		point_light_shader->setFloat("light.linear", 0.001f);
-		point_light_shader->setFloat("light.quadratic", 0.001f);
-
-		// material properties
-		point_light_shader->setFloat("material.shininess", 32.0f);
-	}
-
-	//spot light
-	if (tw->lightBrowser->value() == 3) {
-		spot_light_shader->use();
-		spot_light_shader->setVec3("light.position", camera.Position);
-		spot_light_shader->setVec3("light.direction", camera.Front);
-		spot_light_shader->setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
-		spot_light_shader->setVec3("viewPos", camera.Position);
-		// light properties
-		spot_light_shader->setVec3("light.ambient", 0.1f, 0.1f, 0.1f);
-		// we configure the diffuse intensity slightly higher; the right lighting conditions differ with each lighting method and environment.
-		// each environment and lighting type requires some tweaking to get the best out of your environment.
-		spot_light_shader->setVec3("light.diffuse", 0.8f, 0.8f, 0.8f);
-		spot_light_shader->setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-		spot_light_shader->setFloat("light.constant", 1.0f);
-		spot_light_shader->setFloat("light.linear", 0.05f);
-		spot_light_shader->setFloat("light.quadratic", 0.01f);
-		// material properties
-		spot_light_shader->setFloat("material.shininess", 32.0f);
+	for (int i = 0; i < NR_LIGHT; ++i) {
+		string dir_number = to_string(i);
+		string point_number = to_string(i - 4);
+		if (light_sources[i].type == DIRECTIONAL_LIGHT) {
+			standard_shader->setVec3("dirLight[" + dir_number + "].direction", light_sources[i].direction);
+			standard_shader->setVec3("dirLight[" + dir_number + "].ambient", light_sources[i].ambient);
+			standard_shader->setVec3("dirLight[" + dir_number + "].diffuse", light_sources[i].diffuse);
+			standard_shader->setVec3("dirLight[" + dir_number + "].specular", light_sources[i].specular);
+		}
+		else if (light_sources[i].type == POINT_LIGHT) {
+			cout << "point " << point_number << endl;
+			standard_shader->setVec3("pointLights[" + point_number + "].position", light_sources[i].position);
+			standard_shader->setVec3("pointLights[" + point_number + "].ambient", light_sources[i].ambient);
+			standard_shader->setVec3("pointLights[" + point_number + "].diffuse", light_sources[i].diffuse);
+			standard_shader->setVec3("pointLights[" + point_number + "].specular", light_sources[i].specular);
+			standard_shader->setFloat("pointLights[" + point_number + "].constant", light_sources[i].constant);
+			standard_shader->setFloat("pointLights[" + point_number + "].linear", light_sources[i].linear);
+			standard_shader->setFloat("pointLights[" + point_number + "].quadratic", light_sources[i].quadratic);
+		}
+		else if (light_sources[i].type == SPOT_LIGHT) {
+			standard_shader->setVec3("spotLight.position", light_sources[i].position);
+			standard_shader->setVec3("spotLight.direction", light_sources[i].direction);
+			standard_shader->setVec3("spotLight.ambient", light_sources[i].ambient);
+			standard_shader->setVec3("spotLight.diffuse", light_sources[i].diffuse);
+			standard_shader->setVec3("spotLight.specular", light_sources[i].specular);
+			standard_shader->setFloat("spotLight.constant", light_sources[i].constant);
+			standard_shader->setFloat("spotLight.linear", light_sources[i].linear);
+			standard_shader->setFloat("spotLight.quadratic", light_sources[i].quadratic);
+			standard_shader->setFloat("spotLight.cutOff", light_sources[i].cutOff);
+			standard_shader->setFloat("spotLight.outerCutOff", light_sources[i].outerCutOff);
+		}
 	}
 	glUseProgram(0);
 }
@@ -707,7 +687,7 @@ void TrainView::drawGround() {
 	// world transformation
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::scale(model, glm::vec3(500.0, 1.0, 500.0));
-	current_light_shader->setMat4("model", model);
+	standard_shader->setMat4("model", model);
 
 	//bind VAO and draw plane
 	glBindVertexArray(this->plane->vao);
@@ -716,7 +696,7 @@ void TrainView::drawGround() {
 }
 
 void TrainView::draw_track() {
-	current_light_shader->use();
+	standard_shader->use();
 
 	//draw track with respect to my t_param and qt vectors data
 	for (int i = 0; i < t_param.size(); ++i) {
@@ -764,15 +744,15 @@ void TrainView::draw_track() {
 		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
 		model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
 
-		current_light_shader->setMat4("model", model);
-		my_track->Draw(*current_light_shader);
+		standard_shader->setMat4("model", model);
+		my_track->Draw(*standard_shader);
 		glLineWidth(1);
 	}
 	glUseProgram(0);
 }
 
 void TrainView::draw_sleeper() {
-	current_light_shader->use();
+	standard_shader->use();
 
 	float current_length = 0;
 	while (current_length < accumulate_length.back()) {
@@ -809,58 +789,56 @@ void TrainView::draw_sleeper() {
 		model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
 		model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
 
-		current_light_shader->setMat4("model", model);
-		my_sleeper->Draw(*current_light_shader);
+		standard_shader->setMat4("model", model);
+		my_sleeper->Draw(*standard_shader);
 		current_length += 5;
 	}
 	glUseProgram(0);
 }
 
 void TrainView::draw_train() {
-	current_light_shader->use();
+	standard_shader->use();
 
-	if (!(tw->trainCam->value() == 1 && tw->FPV->value() == 1)) {
-		size_t i;
-		if (tw->arcLength->value() == 0) {
-			i = int(m_pTrack->trainU / 1) * DIVIDE_LINE;
-			i = i + (m_pTrack->trainU - int(m_pTrack->trainU / 1)) * DIVIDE_LINE - 0.1;
-			if (i < 0) {
-				i = (float)m_pTrack->points.size() - i;
-			}
+	size_t i;
+	if (tw->arcLength->value() == 0) {
+		i = int(m_pTrack->trainU / 1) * DIVIDE_LINE;
+		i = i + (m_pTrack->trainU - int(m_pTrack->trainU / 1)) * DIVIDE_LINE - 0.1;
+		if (i < 0) {
+			i = (float)m_pTrack->points.size() - i;
 		}
-		else {
-			i = C_length_index();
-		}
-		float t0 = t_param[i];
-
-		glm::vec3 qt0_v = all_qt[i];
-		glm::vec3 qt1_v;
-		if (i == t_param.size() - 1) qt1_v = all_qt[0];
-		else qt1_v = all_qt[i + 1];
-
-		glm::vec3 orient_t0_v = all_orient[i];
-		glm::vec3 forward = all_forward[i];
-
-		float up_offset = 0.0f;
-		float scale_value = 1.5f;
-
-		mat4 rotate = glm::inverse(glm::lookAt(qt0_v, qt1_v, orient_t0_v));
-
-		// world transformation
-		glm::mat4 model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z));
-		model = rotate * model;
-		//model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
-		model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
-
-		current_light_shader->setMat4("model", model);
-		sci_fi_train->Draw(*current_light_shader);
 	}
+	else {
+		i = C_length_index();
+	}
+	float t0 = t_param[i];
+
+	glm::vec3 qt0_v = all_qt[i];
+	glm::vec3 qt1_v;
+	if (i == t_param.size() - 1) qt1_v = all_qt[0];
+	else qt1_v = all_qt[i + 1];
+
+	glm::vec3 orient_t0_v = all_orient[i];
+	glm::vec3 forward = all_forward[i];
+
+	float up_offset = 0.0f;
+	float scale_value = 1.5f;
+
+	mat4 rotate = glm::inverse(glm::lookAt(qt0_v, qt1_v, orient_t0_v));
+
+	// world transformation
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(up_offset * orient_t0_v.x, up_offset * orient_t0_v.y, up_offset * orient_t0_v.z));
+	model = rotate * model;
+	//model = glm::rotate(model, glm::radians(0.0f), glm::vec3(0, 1, 0));
+	model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
+
+	standard_shader->setMat4("model", model);
+	sci_fi_train->Draw(*standard_shader);
 	glUseProgram(0);
 }
 
 void TrainView::draw_cars() {
-	current_light_shader->use();
+	standard_shader->use();
 
 	float first_offset = 20.0f;
 	for (int i = 0; i < num_of_car; ++i) {
@@ -891,15 +869,15 @@ void TrainView::draw_cars() {
 			model = glm::rotate(model, glm::radians(180.0f), glm::vec3(0, 1, 0));
 			model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
 
-			current_light_shader->setMat4("model", model);
-			my_car->Draw(*current_light_shader);
+			standard_shader->setMat4("model", model);
+			my_car->Draw(*standard_shader);
 		}
 	}
 	glUseProgram(0);
 }
 
 void TrainView::draw_terrain() {
-	current_light_shader->use();
+	standard_shader->use();
 
 	// world transformation
 	float scale_value = 10.0;
@@ -907,8 +885,8 @@ void TrainView::draw_terrain() {
 	model = glm::translate(model, glm::vec3(0,-50,0));
 	model = glm::scale(model, glm::vec3(scale_value, scale_value, scale_value));
 
-	current_light_shader->setMat4("model", model);
-	my_terrain->Draw(*current_light_shader);
+	standard_shader->setMat4("model", model);
+	my_terrain->Draw(*standard_shader);
 	glUseProgram(0);
 }
 
@@ -950,32 +928,41 @@ void TrainView::drawWater(int mode) {
 }
 
 void TrainView::drawTeapot() {
-	current_light_shader->use();
+	standard_shader->use();
 	float scale_value = 10.0;
 	// world transformation
 	glm::mat4 model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(100, 100, 0));
 	model = glm::scale(model, glm::vec3(scale_value));
-	current_light_shader->setMat4("model", model);
+	standard_shader->setMat4("model", model);
 
-	teapot->Draw(*current_light_shader);
+	teapot->Draw(*standard_shader);
 	glUseProgram(0);
 }
 
 void TrainView::drawTrees() {
-	current_light_shader->use();
+	standard_shader->use();
 	for (int i = 0; i < my_trees.size(); ++i) {
-		current_light_shader->setMat4("model", my_trees[i].model_matrix);
-		my_trees[i].model->Draw(*current_light_shader);
+		standard_shader->setMat4("model", my_trees[i].model_matrix);
+		my_trees[i].model->Draw(*standard_shader);
 	}
 	glUseProgram(0);
 }
 
 void TrainView::drawTitans() {
-	current_light_shader->use();
+	standard_shader->use();
 	for (int i = 0; i < my_titans.size(); ++i) {
-		current_light_shader->setMat4("model", my_titans[i].model_matrix);
-		my_titans[i].model->Draw(*current_light_shader);
+		standard_shader->setMat4("model", my_titans[i].model_matrix);
+		my_titans[i].model->Draw(*standard_shader);
+	}
+	glUseProgram(0);
+}
+
+void TrainView::drawLightObjects() {
+	light_source_shader->use();
+	for (int i = 0; i < my_light_objects.size(); ++i) {
+		light_source_shader->setMat4("model", my_light_objects[i].model_matrix);
+		my_light_objects[i].model->Draw(*light_source_shader);
 	}
 	glUseProgram(0);
 }
@@ -990,16 +977,8 @@ void TrainView::drawSkyBox() {
 }
 
 void TrainView::loadShaders() {
-	if (!directional_light_shader) {
-		directional_light_shader = new Shader("../src/shaders/directional_light.vert", "../src/shaders/directional_light.frag");
-	}
-
-	if (!point_light_shader) {
-		point_light_shader = new Shader("../src/shaders/point_light.vert", "../src/shaders/point_light.frag");
-	}
-
-	if (!spot_light_shader) {
-		spot_light_shader = new Shader("../src/shaders/spot_light.vert", "../src/shaders/spot_light.frag");
+	if (!standard_shader) {
+		standard_shader = new Shader("../src/shaders/standard_shader.vert", "../src/shaders/standard_shader.frag");
 	}
 
 	if (!light_source_shader) {
@@ -1065,6 +1044,19 @@ void TrainView::loadModels() {
 		//my_titans.back().scaleVal = glm::vec3(30.0);
 		//my_titans.back().update_modelMatrix();
 	}
+	if (initLightObject) {
+		cout << "loading light objects..." << endl;
+		initLightObject = false;
+		Light_object temp_obj(FileSystem::getPath("resources/objects/sun/sun.obj"));
+		for (int i = 0; i < NR_LIGHT; ++i) {
+			if (light_sources[i].type == POINT_LIGHT) {
+				my_light_objects.push_back(temp_obj);
+				my_light_objects.back().pos = light_sources[i].position;
+				my_light_objects.back().scaleVal = powf(light_sources[i].diffuse.x, 3) * glm::vec3(15.0);
+				my_light_objects.back().update_modelMatrix();
+			}
+		}
+	}
 }
 
 void TrainView::loadTrees() {
@@ -1074,7 +1066,6 @@ void TrainView::loadTrees() {
 	Base_Object temp_tree1(FileSystem::getPath("resources/objects/tree1/JASMIM+MANGA.obj"));
 	cout << "loading tree2..." << endl;
 	Base_Object temp_tree2(FileSystem::getPath("resources/objects/tree2/tree2.obj"));
-	cout << "all trees loaded" << endl;
 
 	string line;
 	while (getline(tree_file, line)) {
@@ -1100,7 +1091,7 @@ void TrainView::loadTrees() {
 
 	my_trees.push_back(temp_tree1);
 	my_trees.back().pos = vec3(0, 0, 0);
-	my_trees.back().scaleVal = glm::vec3(10);
+	my_trees.back().scaleVal = glm::vec3(10); 
 	my_trees.back().update_modelMatrix();
 }
 
@@ -1723,3 +1714,76 @@ void TrainView::addTree() {
 	my_trees.back().update_modelMatrix();
 }
 
+void TrainView::initLightSource() {
+	light_sources[0].type = DIRECTIONAL_LIGHT;
+	light_sources[0].direction = glm::vec3(0, -1, 0);
+	light_sources[0].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[0].diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
+	light_sources[0].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+
+	light_sources[1].type = DIRECTIONAL_LIGHT;
+	light_sources[1].direction = glm::vec3(0.1, -1, 0);
+	light_sources[1].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[1].diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
+	light_sources[1].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+
+	light_sources[2].type = DIRECTIONAL_LIGHT;
+	light_sources[2].direction = glm::vec3(-0.1, -1, 0);
+	light_sources[2].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[2].diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
+	light_sources[2].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+
+	light_sources[3].type = DIRECTIONAL_LIGHT;
+	light_sources[3].direction = glm::vec3(0, -1, -0.1);
+	light_sources[3].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[3].diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
+	light_sources[3].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+
+	light_sources[4].type = POINT_LIGHT;
+	light_sources[4].position = glm::vec3(0.0f, 5000.0, 0.0f);
+	light_sources[4].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[4].diffuse = glm::vec3(3.0f, 0.9f, 0.85f);
+	light_sources[4].specular = glm::vec3(1.0f, 1.0f, 1.0f);
+	light_sources[4].constant = 0.05f;
+	light_sources[4].linear = 0.001;
+	light_sources[4].quadratic = 0.0;
+
+	light_sources[5].type = POINT_LIGHT;
+	light_sources[5].position = glm::vec3(200.0f, 10.0f, 0.0f);
+	light_sources[5].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[5].diffuse = glm::vec3(0.7f, 0.7f, 0.6);
+	light_sources[5].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+	light_sources[5].constant = 0.1f;
+	light_sources[5].linear = 0.01;
+	light_sources[5].quadratic = 0.0;
+
+	light_sources[6].type = POINT_LIGHT;
+	light_sources[6].position = glm::vec3(-200.0f, 0.0f, 0.0f);
+	light_sources[6].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[6].diffuse = glm::vec3(0.6f, 0.6f, 0.55f);
+	light_sources[6].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+	light_sources[6].constant = 0.1f;
+	light_sources[6].linear = 0.01;
+	light_sources[6].quadratic = 0.0;
+
+	light_sources[7].type = POINT_LIGHT;
+	light_sources[7].position = glm::vec3(0.0f, 30.0f, 200.0f);
+	light_sources[7].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[7].diffuse = glm::vec3(0.9f, 0.9f, 0.9f);
+	light_sources[7].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+	light_sources[7].constant = 0.1f;
+	light_sources[7].linear = 0.01;
+	light_sources[7].quadratic = 0.0;
+
+	light_sources[8].type = SPOT_LIGHT;
+	light_sources[8].position = glm::vec3(0.0f, 100.0f, -100.0f);
+	light_sources[8].direction = glm::vec3(0, -1, 0);
+	light_sources[8].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[8].diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
+	light_sources[8].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+	light_sources[8].constant = 1.0f;
+	light_sources[8].linear = 0.09;
+	light_sources[8].quadratic = 0.032;
+	light_sources[8].cutOff = glm::cos(glm::radians(12.5f));
+	light_sources[8].outerCutOff = glm::cos(glm::radians(15.0f));
+}

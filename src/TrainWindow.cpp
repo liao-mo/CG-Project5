@@ -150,16 +150,6 @@ TrainWindow(const int x, const int y)
 		rzp->callback((Fl_Callback*)rmzCB,this);
 		pty+=30;
 
-		// browser to select spline types
-		lightBrowser = new Fl_Browser(605, pty, 120, 75, "Light Type");
-		lightBrowser->type(2);		// select
-		lightBrowser->callback((Fl_Callback*)damageCB, this);
-		lightBrowser->add("Directional");
-		lightBrowser->add("point");
-		lightBrowser->add("spot");
-		lightBrowser->select(1);
-		pty += 135;
-
 		waveTypeBrowser = new Fl_Browser(605, pty, 120, 75, "wave Type");
 		waveTypeBrowser->type(1);		// select
 		waveTypeBrowser->callback((Fl_Callback*)damageCB, this);

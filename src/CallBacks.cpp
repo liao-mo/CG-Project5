@@ -151,7 +151,7 @@ void loadCB(Fl_Widget*, TrainWindow* tw)
 //===========================================================================
 {
 	const char* fname = 
-		fl_file_chooser("Pick a Track File","*.txt","TrackFiles/track.txt");
+		fl_file_chooser("Pick a Track File","*.txt","../TrackFiles/track.txt");
 	if (fname) {
 		tw->m_Track.readPoints(fname);
 		tw->damageMe();
@@ -164,10 +164,8 @@ void loadCB(Fl_Widget*, TrainWindow* tw)
 void saveCB(Fl_Widget*, TrainWindow* tw)
 //===========================================================================
 {
-	const char* fname = 
-		fl_input("File name for save (should be *.txt)","TrackFiles/");
-	if (fname)
-		tw->m_Track.writePoints(fname);
+	const char* fname = fl_input("File name for save (should be *.txt)","../TrackFiles/");
+	if (fname) tw->m_Track.writePoints(fname);
 }
 
 //***************************************************************************

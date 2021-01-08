@@ -107,9 +107,6 @@ class TrainWindow : public Fl_Double_Window {
 		Fl_Value_Slider*	speed;
 		Fl_Button*			arcLength;		// do we use arc length for speed?
 
-		// the type of the light
-		Fl_Browser* lightBrowser;
-
 		//water adjustment
 		Fl_Value_Slider* waterAmplitude;
 		Fl_Value_Slider* waterWaveLength;

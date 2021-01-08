@@ -8,16 +8,8 @@ set(LIB_DIR ${PROJECT_SOURCE_DIR}/lib/)
 set(SRC_SHADER 
     ${SRC_DIR}shaders/simple.vert
     ${SRC_DIR}shaders/simple.frag
-    ${SRC_DIR}shaders/basic_lighting.vert
-    ${SRC_DIR}shaders/basic_lighting.frag
     ${SRC_DIR}shaders/light_cube.vert
     ${SRC_DIR}shaders/light_cube.frag
-    ${SRC_DIR}shaders/directional_light.vert
-    ${SRC_DIR}shaders/directional_light.frag
-    ${SRC_DIR}shaders/point_light.vert
-    ${SRC_DIR}shaders/point_light.frag
-    ${SRC_DIR}shaders/spot_light.vert
-    ${SRC_DIR}shaders/spot_light.frag
     ${SRC_DIR}shaders/water_surface.vert
     ${SRC_DIR}shaders/water_surface.frag
     ${SRC_DIR}shaders/sky_box.vert
@@ -31,7 +23,9 @@ set(SRC_SHADER
     ${SRC_DIR}shaders/color_uv.vert
     ${SRC_DIR}shaders/color_uv.frag
     ${SRC_DIR}shaders/interactive_heightmap.vert
-    ${SRC_DIR}shaders/interactive_heightmap.frag)
+    ${SRC_DIR}shaders/interactive_heightmap.frag
+    ${SRC_DIR}shaders/standard_shader.vert
+    ${SRC_DIR}shaders/standard_shader.frag)
 
 set(SRC_RENDER_UTILITIES
     ${SRC_DIR}RenderUtilities/BufferObject.h

@@ -20,6 +20,15 @@
 #include "Utilities/ArcBallCam.H"
 #include "RenderUtilities/Texture.h"
 
+#include <learnopengl/filesystem.h>
+#include <learnopengl/shader_m.h>
+#include <learnopengl/camera.h>
+#include <learnopengl/model.h>
+
+#define DIRECTIONAL_LIGHT 0
+#define POINT_LIGHT 1
+#define SPOT_LIGHT 2
+
 using namespace std;
 
 class Base_Object {
@@ -46,4 +55,26 @@ public:
 		if(rotation_angle > 0.1) model_matrix = glm::rotate(model_matrix, glm::radians(rotation_angle), rotation_axis);
 		model_matrix = glm::scale(model_matrix, glm::vec3(scaleVal));
 	}
+};
+
+class Light_object : public Base_Object{
+public:
+	Light_object(string file_name) : Base_Object(file_name){
+
+	}
+};
+
+struct Light_Source {
+	int type = DIRECTIONAL_LIGHT;
+
+	glm::vec3 direction;
+	glm::vec3 position;
+	glm::vec3 ambient;
+	glm::vec3 diffuse;
+	glm::vec3 specular;
+	float constant;
+	float linear;
+	float quadratic;
+	float cutOff;
+	float outerCutOff;
 };
