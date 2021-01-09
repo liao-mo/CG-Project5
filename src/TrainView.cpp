@@ -36,6 +36,7 @@ TrainView(int x, int y, int w, int h, const char* l) :
 	Fl_Gl_Window(x, y, w, h, l)
 //========================================================================
 {
+	cout << "Initializing..." << endl;
 	mode( FL_RGB|FL_ALPHA|FL_DOUBLE | FL_STENCIL );
 
 	resetArcball();
@@ -45,6 +46,7 @@ TrainView(int x, int y, int w, int h, const char* l) :
 	old_t = glutGet(GLUT_ELAPSED_TIME);
 	k_pressed = false;
 	initLightSource();
+
 }
 
 // * Reset the camera to look at the world
@@ -117,6 +119,7 @@ int TrainView::handle(int event)
 			cp->pos.x = (float)rx;
 			cp->pos.y = (float)ry;
 			cp->pos.z = (float)rz;
+			update_arcLengh();
 			damage(1);
 		}
 		// Compute the new tree position
@@ -229,6 +232,9 @@ void TrainView::draw()
 		//load shaders
 		loadShaders();
 
+		//initialize particle system
+		initParticleSystem();
+
 		//load models
 		loadModels();
 
@@ -251,17 +257,19 @@ void TrainView::draw()
 		
 		loadTextures();
 
+		initTrackData();
+
 		initSound();
+
+		initRun();
 	}
 	else
 		throw std::runtime_error("Could not initialize GLAD!");
 
 	// Set up the view port
 	glViewport(0,0,w(),h());
-	
 	// clear the window, be sure to clear the Z-Buffer too
-	glClearColor(0,0,.3f,0);		// background should be blue
-
+	glClearColor(0,0,0,0);
 	// we need to clear out the stencil buffer since we'll use
 	// it for shadows
 	glClearStencil(0);
@@ -275,9 +283,7 @@ void TrainView::draw()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	projectionMatrix = glm::mat4(1.0);
-
 	setProjection();		// put the code to set up matrices here
-	update_arcLengh();
 
 	// enable the lighting
 	glEnable(GL_COLOR_MATERIAL);
@@ -288,7 +294,6 @@ void TrainView::draw()
 	
 	// now draw the ground plane
 	glUseProgram(0);
-
 	//setupFloor();
 	//glDisable(GL_LIGHTING);
 	//drawFloor(200,10);
@@ -311,7 +316,7 @@ void TrainView::draw()
 
 	drawTrees();
 
-	drawTitans();
+	//drawTitans();
 	
 	draw_track();
 
@@ -321,23 +326,26 @@ void TrainView::draw()
 
 	draw_cars();
 
+	updateLightSource();
 	drawLightObjects();
+
+	drawBrickWall();
+
+	drawBrickWall2();
+
+	//drawCyborg();
 
 	draw_terrain();
 
-	//drawWater(tw->waveTypeBrowser->value());
+	drawWater(tw->waveTypeBrowser->value());
 
 	drawSkyBox();
 
 	//draw main FBO to the whole screen
 	//drawMainScreen();
-
 	//drawSubScreen();
 
-	//unbind VAO
 	glBindVertexArray(0);
-
-	//unbind shader(switch to fixed pipeline)
 	glUseProgram(0);
 }
 
@@ -656,7 +664,6 @@ void TrainView::update_light_shaders() {
 			standard_shader->setVec3("dirLight[" + dir_number + "].specular", light_sources[i].specular);
 		}
 		else if (light_sources[i].type == POINT_LIGHT) {
-			cout << "point " << point_number << endl;
 			standard_shader->setVec3("pointLights[" + point_number + "].position", light_sources[i].position);
 			standard_shader->setVec3("pointLights[" + point_number + "].ambient", light_sources[i].ambient);
 			standard_shader->setVec3("pointLights[" + point_number + "].diffuse", light_sources[i].diffuse);
@@ -706,22 +713,22 @@ void TrainView::draw_track() {
 		else qt1_v = all_qt[i + 1];
 
 		glm::vec3 orient_t0_v = all_orient[i];
-		glm::vec3 forward = all_forward[i];
+		//glm::vec3 forward = all_forward[i];
 
-		glm::vec3 offset_vec1 = glm::cross(forward, orient_t0_v);
-		offset_vec1 = glm::normalize(offset_vec1);
-		offset_vec1 *= 1.5 * DIVIDE_LINE / 100;
-		glm::vec3 offset_vec2 = 1.5f * offset_vec1;
+		//glm::vec3 offset_vec1 = glm::cross(forward, orient_t0_v);
+		//offset_vec1 = glm::normalize(offset_vec1);
+		//offset_vec1 *= 1.5 * DIVIDE_LINE / 100;
+		//glm::vec3 offset_vec2 = 1.5f * offset_vec1;
 
 
-		glm::vec3 left_track0 = qt0_v + offset_vec1;
-		glm::vec3 left_track1 = qt1_v + offset_vec1;
-		glm::vec3 left_track2 = qt1_v + offset_vec2;
-		glm::vec3 left_track3 = qt0_v + offset_vec2;
-		glm::vec3 right_track0 = qt0_v - offset_vec1;
-		glm::vec3 right_track1 = qt1_v - offset_vec1;
-		glm::vec3 right_track2 = qt1_v - offset_vec2;
-		glm::vec3 right_track3 = qt0_v - offset_vec2;
+		//glm::vec3 left_track0 = qt0_v + offset_vec1;
+		//glm::vec3 left_track1 = qt1_v + offset_vec1;
+		//glm::vec3 left_track2 = qt1_v + offset_vec2;
+		//glm::vec3 left_track3 = qt0_v + offset_vec2;
+		//glm::vec3 right_track0 = qt0_v - offset_vec1;
+		//glm::vec3 right_track1 = qt1_v - offset_vec1;
+		//glm::vec3 right_track2 = qt1_v - offset_vec2;
+		//glm::vec3 right_track3 = qt0_v - offset_vec2;
 
 		glLineWidth(5);
 		float scale_value = 1.0f;
@@ -732,9 +739,9 @@ void TrainView::draw_track() {
 			orient_t0_v));
 
 		float up_offset = -0.3f;
-		glm::vec3 side_offset_v = glm::cross(forward, orient_t0_v);
-		side_offset_v = glm::normalize(side_offset_v);
-		side_offset_v *= 1.5f;
+		//glm::vec3 side_offset_v = glm::cross(forward, orient_t0_v);
+		//side_offset_v = glm::normalize(side_offset_v);
+		//side_offset_v *= 1.5f;
 
 		// world transformation
 		glm::mat4 model = glm::mat4(1.0f);
@@ -757,28 +764,18 @@ void TrainView::draw_sleeper() {
 	float current_length = 0;
 	while (current_length < accumulate_length.back()) {
 		size_t i = length_to_index(current_length);
-
 		glm::vec3 qt0_v = all_qt[i];
 		glm::vec3 qt1_v;
 		if (i == t_param.size() - 1) qt1_v = all_qt[0];
 		else qt1_v = all_qt[i + 1];
 
 		glm::vec3 orient_t0_v = all_orient[i];
-		glm::vec3 forward = all_forward[i];
 
-		glm::vec3 offset_vec1 = glm::cross(forward, orient_t0_v);
-		offset_vec1 = glm::normalize(offset_vec1);
-		offset_vec1 *= 1.5 * DIVIDE_LINE / 100;
-		glm::vec3 offset_vec2 = 1.5f * offset_vec1;
-
-
-		float scale_value = 3.5f;
-
+		float scale_value = 5.0f;
 		mat4 rotate = glm::inverse(glm::lookAt(
 			qt0_v,
 			qt1_v,
 			orient_t0_v));
-
 		float up_offset = -1.5f;
 
 		// world transformation
@@ -791,7 +788,7 @@ void TrainView::draw_sleeper() {
 
 		standard_shader->setMat4("model", model);
 		my_sleeper->Draw(*standard_shader);
-		current_length += 5;
+		current_length += 20;
 	}
 	glUseProgram(0);
 }
@@ -835,6 +832,16 @@ void TrainView::draw_train() {
 	standard_shader->setMat4("model", model);
 	sci_fi_train->Draw(*standard_shader);
 	glUseProgram(0);
+
+
+	//draw smode particles
+	glm::vec3 particle_pos(qt0_v);
+	float particle_up = 10.0;
+	float particle_forward = 10.0;
+	particle_pos = particle_pos + glm::vec3(particle_up * orient_t0_v.x, particle_up * orient_t0_v.y, particle_up * orient_t0_v.z);
+	particle_pos = particle_pos + particle_forward * forward;
+	glm::vec3 particle_dir(0, 20, 0);
+	drawParticles(particle_pos, 5, 0.5, -4, 3, particle_dir);
 }
 
 void TrainView::draw_cars() {
@@ -967,6 +974,132 @@ void TrainView::drawLightObjects() {
 	glUseProgram(0);
 }
 
+void TrainView::drawCyborg() {
+	normalMapping_shader->use();
+	//standard_shader->use();
+	float scale_value = 10.0;
+	// world transformation
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0, 0, 0));
+	model = glm::scale(model, glm::vec3(scale_value));
+	//standard_shader->setMat4("model", model);
+
+	normalMapping_shader->setMat4("model", model);
+	normalMapping_shader->setVec3("viewPos", camera.Position);
+	normalMapping_shader->setVec3("lightPos", light_sources[4].position);
+	normalMapping_shader->setInt("diffuseMap", 0);
+	normalMapping_shader->setInt("normalMap", 2);
+	my_cyborg->Draw(*normalMapping_shader);
+	glUseProgram(0);
+}
+
+void TrainView::drawBrickWall() {
+	// shader configuration
+	// --------------------
+	normalMapping_shader->use();
+	normalMapping_shader->setInt("diffuseMap", 0);
+	normalMapping_shader->setInt("normalMap", 1);
+	// lighting info
+	// -------------
+	
+
+	// render normal-mapped quad
+	glm::mat4 model = glm::mat4(1.0f);
+	//model = glm::rotate(model, glm::radians((float)glfwGetTime() * -10.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0))); // rotate the quad to show normal mapping from multiple directions
+	model = glm::translate(model, glm::vec3(0, 1000, 3000));
+	model = glm::scale(model, glm::vec3(3300, 1000, 1000));
+	normalMapping_shader->setMat4("model", model);
+	normalMapping_shader->setVec3("viewPos", camera.Position);
+	normalMapping_shader->setVec3("lightPos", light_sources[4].position);
+	//normalMapping_shader->setVec3("lightPos", glm::vec3(0,0,0));
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, brick_diffuseMap);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, brick_normalMap);
+	renderQuad();
+
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0, 1000, -3000));
+	model = glm::scale(model, glm::vec3(3300, 1000, 1000));
+	normalMapping_shader->setMat4("model", model);
+	renderQuad();
+
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(3000, 1000, 0));
+	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+	model = glm::scale(model, glm::vec3(3300, 1000, 1000));
+	normalMapping_shader->setMat4("model", model);
+	renderQuad();
+
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-3000, 1000, 0));
+	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(0, 1, 0));
+	model = glm::scale(model, glm::vec3(3300, 1000, 1000));
+	normalMapping_shader->setMat4("model", model);
+	renderQuad();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glUseProgram(0);
+}
+
+void TrainView::drawBrickWall2() {
+	// shader configuration
+// --------------------
+	parallaxMapping_shader->use();
+	parallaxMapping_shader->setInt("diffuseMap", 0);
+	parallaxMapping_shader->setInt("normalMap", 1);
+	parallaxMapping_shader->setInt("depthMap", 2);
+
+	glm::vec3 lightPos = light_sources[4].position;
+	lightPos = 50.0f * glm::normalize(lightPos);
+	float heightScale = 0.1;
+
+	parallaxMapping_shader->use();
+	//glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)w() / (float)h(), 0.1f, 100.0f);
+	parallaxMapping_shader->setMat4("projection", projectionMatrix);
+	parallaxMapping_shader->setMat4("view", viewMatrix);
+	// render parallax-mapped quad
+	glm::mat4 model = glm::mat4(1.0f);
+	//model = glm::rotate(model, glm::radians((float)now_t / 1000.0f * -10.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
+	model = glm::translate(model, glm::vec3(-390, 10, 0));
+	model = glm::scale(model, glm::vec3(100,100,100));
+	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1, 0, 0));
+	model = glm::rotate(model, glm::radians(-15.0f), glm::vec3(0, 1, 0));
+	parallaxMapping_shader->setMat4("model", model);
+	parallaxMapping_shader->setVec3("viewPos", camera.Position);
+	parallaxMapping_shader->setVec3("lightPos", lightPos);
+	parallaxMapping_shader->setFloat("heightScale", heightScale);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, brick2_diffuseMap);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, brick2_normalMap);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, brick2_heightMap);
+	renderQuad();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glUseProgram(0);
+}
+
+void TrainView::drawParticles(glm::vec3 pos, double life, double size, double gravity, double spread, glm::vec3 dir) {
+	particle_system->delta = delta_t;
+	particle_system->setMatrix(projectionMatrix, viewMatrix);
+	particle_system->update();
+
+	particle_system->particle_position = pos;
+	particle_system->particle_life = life;
+	particle_system->particle_size = size;
+	particle_system->particle_gravity = gravity;
+	particle_system->particle_spread = spread;
+	particle_system->particle_maindir = dir;
+}
+
 void TrainView::drawSkyBox() {
 	glm::mat4 model = glm::mat4(1.0);
 
@@ -980,23 +1113,24 @@ void TrainView::loadShaders() {
 	if (!standard_shader) {
 		standard_shader = new Shader("../src/shaders/standard_shader.vert", "../src/shaders/standard_shader.frag");
 	}
-
 	if (!light_source_shader) {
 		light_source_shader = new Shader("../src/shaders/light_cube.vert", "../src/shaders/light_cube.frag");
 	}
-
 	if (!mainScreen_shader) {
 		mainScreen_shader = new Shader("../src/shaders/main_screen.vert", "../src/shaders/main_screen.frag");
 	}
-
 	if (!subScreen_shader) {
 		subScreen_shader = new Shader("../src/shaders/sub_screen.vert", "../src/shaders/sub_screen.frag");
 	}
-
 	if (!interactiveHeightMap_shader) {
 		interactiveHeightMap_shader = new Shader("../src/shaders/interactive_heightmap.vert", "../src/shaders/interactive_heightmap.frag");
 	}
-	
+	if (!normalMapping_shader) {
+		normalMapping_shader = new Shader("../src/shaders/normal_mapping.vert", "../src/shaders/normal_mapping.frag");
+	}
+	if (!parallaxMapping_shader) {
+		parallaxMapping_shader = new Shader("../src/shaders/parallax_mapping.vert", "../src/shaders/parallax_mapping.frag");
+	}
 }
 
 void TrainView::loadModels() {
@@ -1014,7 +1148,7 @@ void TrainView::loadModels() {
 	}
 	if (!my_car) {
 		cout << "loading train car..." << endl;
-		//my_car = new Model(FileSystem::getPath("resources/objects/train_car/train_car.obj"));
+		my_car = new Model(FileSystem::getPath("resources/objects/train_car/train_car.obj"));
 		my_car = new Model(FileSystem::getPath("resources/objects/planet/planet.obj"));
 	}
 	if (!teapot) {
@@ -1025,13 +1159,18 @@ void TrainView::loadModels() {
 		cout << "loading terrain..." << endl;
 		my_terrain = new Model(FileSystem::getPath("resources/objects/terrain/terrain.obj"));
 	}
+	if (!my_cyborg) {
+		cout << "loading cyborg..." << endl;
+		my_cyborg = new Model(FileSystem::getPath("resources/objects/cyborg/cyborg.obj"));
+	}
 	if (initTree) {
 		initTree = false;
-		loadTrees();
+		//loadTrees();
 
 	}
 	if (initTitan) {
 		initTitan = false;
+		cout << "loading titans..." << endl;
 		//Base_Object temp_titan1(FileSystem::getPath("resources/objects/titan/chou/chou.obj"));
 		//Base_Object temp_titan2(FileSystem::getPath("resources/objects/titan/tsai/tsai.obj"));
 		//my_titans.push_back(temp_titan1);
@@ -1056,7 +1195,10 @@ void TrainView::loadModels() {
 				my_light_objects.back().update_modelMatrix();
 			}
 		}
+		cout << "All models are loaded." << endl;
 	}
+
+	
 }
 
 void TrainView::loadTrees() {
@@ -1100,11 +1242,22 @@ void TrainView::loadTextures() {
 		ground_texture = new Texture2D("../Images/black_white_board.png");
 	if (!water_texture)
 		water_texture = new Texture2D("../Images/blue.png");
+
+	if (initBrickTexture) {
+		initBrickTexture = false;
+		brick_diffuseMap = loadTexture(FileSystem::getPath("resources/textures/brickwall.jpg").c_str());
+		brick_normalMap = loadTexture(FileSystem::getPath("resources/textures/brickwall_normal.jpg").c_str());
+
+		brick2_diffuseMap = loadTexture(FileSystem::getPath("resources/textures/bricks2.jpg").c_str());
+		brick2_normalMap = loadTexture(FileSystem::getPath("resources/textures/bricks2_normal.jpg").c_str());
+		brick2_heightMap = loadTexture(FileSystem::getPath("resources/textures/bricks2_disp.jpg").c_str());
+	}
 }
 
 void TrainView::loadWaterMesh() {
 	if (!waterMesh) {
-		//waterMesh = new WaterMesh(glm::vec3(0.0, 20.0, 0.0));
+		cout << "loading water mesh..." << endl;
+		waterMesh = new WaterMesh(glm::vec3(0.0, 20.0, 0.0));
 	}
 }
 
@@ -1439,6 +1592,7 @@ std::vector<Pnt3f> TrainView::find_orient_vectors(int currentPoint) {
 
 //update track data 
 void TrainView::update_arcLengh() {
+	cout << "update track data\n";
 	size_t size = DIVIDE_LINE * m_pTrack->points.size();
 
 	glm::vec3 default_vec3(0, 0, 0);
@@ -1742,7 +1896,7 @@ void TrainView::initLightSource() {
 	light_sources[4].type = POINT_LIGHT;
 	light_sources[4].position = glm::vec3(0.0f, 5000.0, 0.0f);
 	light_sources[4].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
-	light_sources[4].diffuse = glm::vec3(3.0f, 0.9f, 0.85f);
+	light_sources[4].diffuse = glm::vec3(3.0f, 2.8f, 2.7f);
 	light_sources[4].specular = glm::vec3(1.0f, 1.0f, 1.0f);
 	light_sources[4].constant = 0.05f;
 	light_sources[4].linear = 0.001;
@@ -1786,4 +1940,137 @@ void TrainView::initLightSource() {
 	light_sources[8].quadratic = 0.032;
 	light_sources[8].cutOff = glm::cos(glm::radians(12.5f));
 	light_sources[8].outerCutOff = glm::cos(glm::radians(15.0f));
+}
+
+void TrainView::updateLightSource() {
+	float radius = 5000.0;
+	float speed = 0.01;
+	float x = radius * cos((now_t / 1000.0) * speed);
+	float y = radius * sin((now_t / 1000.0) * speed);
+
+
+
+	light_sources[4].position = glm::vec3(x, y, 0.0f);
+	my_light_objects[0].pos = light_sources[4].position;
+	my_light_objects[0].update_modelMatrix();
+	if (y >= 0) {
+		light_sources[4].constant = 0.05f;
+		light_sources[4].linear = 0.001;
+		light_sources[4].quadratic = 0.0;
+	}
+	else {
+		light_sources[4].constant = 1.0f;
+		light_sources[4].linear = 1.0;
+		light_sources[4].quadratic = 1.0;
+	}
+
+}
+
+void TrainView::initParticleSystem() {
+	if (!particle_system) {
+		particle_system = new Particle_system;
+	}
+}
+
+void TrainView::initRun() {
+	if (firstRun) {
+		firstRun = false;
+		tw->runButton->set();
+	}
+}
+
+void TrainView::renderQuad() {
+	if (quadVAO == 0)
+	{
+		// positions
+		glm::vec3 pos1(-1.0f, 1.0f, 0.0f);
+		glm::vec3 pos2(-1.0f, -1.0f, 0.0f);
+		glm::vec3 pos3(1.0f, -1.0f, 0.0f);
+		glm::vec3 pos4(1.0f, 1.0f, 0.0f);
+		// texture coordinates
+		glm::vec2 uv1(0.0f, 1.0f);
+		glm::vec2 uv2(0.0f, 0.0f);
+		glm::vec2 uv3(1.0f, 0.0f);
+		glm::vec2 uv4(1.0f, 1.0f);
+		// normal vector
+		glm::vec3 nm(0.0f, 0.0f, 1.0f);
+
+		// calculate tangent/bitangent vectors of both triangles
+		glm::vec3 tangent1, bitangent1;
+		glm::vec3 tangent2, bitangent2;
+		// triangle 1
+		// ----------
+		glm::vec3 edge1 = pos2 - pos1;
+		glm::vec3 edge2 = pos3 - pos1;
+		glm::vec2 deltaUV1 = uv2 - uv1;
+		glm::vec2 deltaUV2 = uv3 - uv1;
+
+		float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+		tangent1.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+		tangent1.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+		tangent1.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+		bitangent1.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+		bitangent1.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+		bitangent1.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+		// triangle 2
+		// ----------
+		edge1 = pos3 - pos1;
+		edge2 = pos4 - pos1;
+		deltaUV1 = uv3 - uv1;
+		deltaUV2 = uv4 - uv1;
+
+		f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+
+		tangent2.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
+		tangent2.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);
+		tangent2.z = f * (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z);
+
+
+		bitangent2.x = f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x);
+		bitangent2.y = f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y);
+		bitangent2.z = f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z);
+
+
+		float quadVertices[] = {
+			// positions            // normal         // texcoords  // tangent                          // bitangent
+			pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+			pos2.x, pos2.y, pos2.z, nm.x, nm.y, nm.z, uv2.x, uv2.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+			pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent1.x, tangent1.y, tangent1.z, bitangent1.x, bitangent1.y, bitangent1.z,
+
+			pos1.x, pos1.y, pos1.z, nm.x, nm.y, nm.z, uv1.x, uv1.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+			pos3.x, pos3.y, pos3.z, nm.x, nm.y, nm.z, uv3.x, uv3.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z,
+			pos4.x, pos4.y, pos4.z, nm.x, nm.y, nm.z, uv4.x, uv4.y, tangent2.x, tangent2.y, tangent2.z, bitangent2.x, bitangent2.y, bitangent2.z
+		};
+		// configure plane VAO
+		glGenVertexArrays(1, &quadVAO);
+		glGenBuffers(1, &quadVBO);
+		glBindVertexArray(quadVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(6 * sizeof(float)));
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(8 * sizeof(float)));
+		glEnableVertexAttribArray(4);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 14 * sizeof(float), (void*)(11 * sizeof(float)));
+	}
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindVertexArray(0);
+}
+
+void TrainView::initTrackData() {
+	if (initTrack) {
+		initTrack = false;
+		tw->m_Track.readPoints("../TrackFiles/map.txt");
+		update_arcLengh();
+		
+	}
 }

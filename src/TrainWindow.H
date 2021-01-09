@@ -124,7 +124,6 @@ class TrainWindow : public Fl_Double_Window {
 		////do grayscale
 		//Fl_Button* grayscale;
 
-		Fl_Button* envLight; // do we want environment lighting?
 		Fl_Button* physics; // do we want physics?
 
 

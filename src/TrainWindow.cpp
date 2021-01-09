@@ -179,10 +179,6 @@ TrainWindow(const int x, const int y)
 		waterSpeed->type(FL_HORIZONTAL);
 		pty += 30;
 
-		envLight = new Fl_Button(605, pty, 100, 20, "Lighting");
-		togglify(envLight, 1);
-		pty += 30;
-
 		physics = new Fl_Button(605, pty, 100, 20, "Physics");
 		togglify(physics, 1);
 		pty += 30;

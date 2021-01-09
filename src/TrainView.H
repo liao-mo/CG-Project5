@@ -13,6 +13,7 @@
 #include "SkyBox.h"
 #include "FrameBuffer.h"
 #include "Object.H"
+#include "Particle_system.h"
 
 // this uses the old ArcBall Code
 #include "Utilities/ArcBallCam.H"
@@ -82,9 +83,6 @@ class TrainView : public Fl_Gl_Window
 		//my function that draws my terrain
 		void draw_terrain();
 
-		//my function that draws my env models
-		void draw_env_model();
-
 		// setup the projection - assuming that the projection stack has been
 		// cleared for you
 		void setProjection();
@@ -97,12 +95,6 @@ class TrainView : public Fl_Gl_Window
 
 		//set ubo
 		void setUBO();
-
-		//setupt train's head light
-		void set_train_light();
-
-		//update track data 
-		void update_arcLengh();
 
 		//use current length to find parameter t
 		float length_to_t(float length);
@@ -128,6 +120,9 @@ class TrainView : public Fl_Gl_Window
 
 		
 	public:
+		bool firstRun = true;
+		void initRun();
+
 		ArcBallCam		arcball;			// keep an ArcBall for the UI
 		int				selectedObject;  // simple - just remember which object is selected
 		int				selectedCube;  // simple - just remember which cube is selected
@@ -142,6 +137,8 @@ class TrainView : public Fl_Gl_Window
 		Shader* mainScreen_shader = nullptr;
 		Shader* subScreen_shader = nullptr;
 		Shader* interactiveHeightMap_shader = nullptr;
+		Shader* normalMapping_shader = nullptr;
+		Shader* parallaxMapping_shader = nullptr;
 		void loadShaders();
 		void update_light_shaders();
 
@@ -167,17 +164,34 @@ class TrainView : public Fl_Gl_Window
 		//textures
 		Texture2D* ground_texture	= nullptr;
 		Texture2D* water_texture = nullptr;
+		bool initBrickTexture = true;
+		unsigned int brick_diffuseMap;
+		unsigned int brick_normalMap;
+		unsigned int brick2_diffuseMap;
+		unsigned int brick2_normalMap;
+		unsigned int brick2_heightMap;
+		void loadTextures();
+
+		//brick
+		unsigned int quadVAO = 0;
+		unsigned int quadVBO;
+		void renderQuad();
 
 		//plane
 		VAO* plane			= nullptr;
 		UBO* commom_matrices= nullptr;
-		void loadTextures();
 		void initUBO();
 		void initPlane();
 
 		//light source
 		Light_Source light_sources[9];
 		void initLightSource();
+		void updateLightSource();
+
+		//particle system
+		Particle_system* particle_system = nullptr;
+		void initParticleSystem();
+		void drawParticles(glm::vec3 pos, double life, double size, double gravity, double spread, glm::vec3 dir);
 
 		//models
 		Model* sci_fi_train = nullptr;
@@ -185,7 +199,9 @@ class TrainView : public Fl_Gl_Window
 		Model* my_sleeper = nullptr;			
 		Model* my_track = nullptr;			
 		Model* my_car = nullptr;				
-		Model* my_terrain = nullptr;	
+		Model* my_terrain = nullptr;
+		Model* my_cyborg = nullptr;
+		Model* my_brick_wall = nullptr;
 		vector<Base_Object> my_trees;
 		vector<Base_Object> my_titans;
 		vector<Light_object> my_light_objects;
@@ -201,6 +217,9 @@ class TrainView : public Fl_Gl_Window
 		void addTree();
 		void drawTitans();
 		void drawLightObjects();
+		void drawCyborg();
+		void drawBrickWall();
+		void drawBrickWall2();
 		void deleteSelectedObject();
 
 		//water
@@ -248,9 +267,6 @@ class TrainView : public Fl_Gl_Window
 		glm::mat4 viewMatrix;
 		glm::mat4 projectionMatrix;
 
-
-
-
 		//find 4 control point around current point
 		std::vector<Pnt3f> find_Cpoints(int currentPoint);
 		//find 4 orient vector around current point
@@ -263,4 +279,9 @@ class TrainView : public Fl_Gl_Window
 		std::vector<glm::vec3> all_qt;
 		std::vector<glm::vec3> all_orient;
 		std::vector<glm::vec3> all_forward;
+
+		//update track data 
+		void update_arcLengh();
+		bool initTrack = true;
+		void initTrackData();
 };

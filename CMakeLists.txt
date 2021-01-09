@@ -25,7 +25,13 @@ set(SRC_SHADER
     ${SRC_DIR}shaders/interactive_heightmap.vert
     ${SRC_DIR}shaders/interactive_heightmap.frag
     ${SRC_DIR}shaders/standard_shader.vert
-    ${SRC_DIR}shaders/standard_shader.frag)
+    ${SRC_DIR}shaders/standard_shader.frag
+    ${SRC_DIR}shaders/Particle.vert
+    ${SRC_DIR}shaders/Particle.frag
+    ${SRC_DIR}shaders/normal_mapping.vert
+    ${SRC_DIR}shaders/normal_mapping.frag
+    ${SRC_DIR}shaders/parallax_mapping.vert
+    ${SRC_DIR}shaders/parallax_mapping.frag)
 
 set(SRC_RENDER_UTILITIES
     ${SRC_DIR}RenderUtilities/BufferObject.h
@@ -35,6 +41,7 @@ set(SRC_RENDER_UTILITIES
 include_directories(${INCLUDE_DIR})
 include_directories(${INCLUDE_DIR}glad4.6/include/)
 include_directories(${INCLUDE_DIR}glm-0.9.8.5/glm/)
+include_directories(${INCLUDE_DIR}glfw-3.1.2/include)
 
 configure_file(configuration/root_directory.h.in configuration/root_directory.h)
 include_directories(${CMAKE_BINARY_DIR}/configuration)
@@ -56,6 +63,7 @@ add_executable(WaterSurface
     ${SRC_DIR}SkyBox.h
     ${SRC_DIR}FrameBuffer.h
     ${SRC_DIR}My_functions.H
+    ${SRC_DIR}Particle_system.H
 
     ${SRC_DIR}main.cpp
     ${SRC_DIR}CallBacks.cpp
@@ -66,6 +74,7 @@ add_executable(WaterSurface
     ${SRC_DIR}WaterMesh.cpp
     ${SRC_DIR}SkyBox.cpp
     ${SRC_DIR}FrameBuffer.cpp
+    ${SRC_DIR}Particle_system.cpp
 
     ${SRC_SHADER}
     ${SRC_RENDER_UTILITIES}
@@ -89,6 +98,11 @@ add_library(Utilities
     ${SRC_DIR}Utilities/Matrices.cpp
     ${SRC_DIR}Utilities/Vectors.h)
 
+add_library(OpenGL_tutorial
+    ${SRC_DIR}openGL_tutorial/texture.hpp
+    ${SRC_DIR}openGL_tutorial/texture.cpp
+)
+
 target_link_libraries(WaterSurface 
     debug ${LIB_DIR}Debug/fltk_formsd.lib      optimized ${LIB_DIR}Release/fltk_forms.lib
     debug ${LIB_DIR}Debug/fltk_gld.lib         optimized ${LIB_DIR}Release/fltk_gl.lib
@@ -98,7 +112,9 @@ target_link_libraries(WaterSurface
     debug ${LIB_DIR}Debug/fltk_zd.lib          optimized ${LIB_DIR}Release/fltk_z.lib
     debug ${LIB_DIR}Debug/fltkd.lib            optimized ${LIB_DIR}Release/fltk.lib
     debug ${LIB_DIR}Debug/opencv_world341d.lib optimized ${LIB_DIR}Release/opencv_world341.lib
-    debug ${LIB_DIR}Debug/freeglutd.lib        optimized ${LIB_DIR}Release/freeglut.lib)
+    debug ${LIB_DIR}Debug/freeglutd.lib        optimized ${LIB_DIR}Release/freeglut.lib
+    debug ${LIB_DIR}glfw3.lib                  optimized ${LIB_DIR}glfw3.lib
+    debug ${LIB_DIR}GLEW_1130.lib              optimized ${LIB_DIR}GLEW_1130.lib)
 
 target_link_libraries(WaterSurface 
     ${LIB_DIR}OpenGL32.lib
