@@ -2281,7 +2281,6 @@ void TrainView::launchCannon() {
 	if (!(my_cannons.size() <= MAX_NR_CANNON)) {
 		return;
 	}
-	cout << "lauching a cannon..." << endl;
 	my_cannons.push_back(all_cannons[0]);
 	size_t i;
 	if (tw->arcLength->value() == 0) {
@@ -2298,9 +2297,12 @@ void TrainView::launchCannon() {
 	my_cannons.back().pos = qt0_v;
 	float scale = 25.0f;
 	my_cannons.back().scaleVal = glm::vec3(scale, scale, scale);
-	glm::vec3 speed = 3000.0f * camera.Front;
+	glm::vec3 speed = 5000.0f * camera.Front;
+	if (playing && game_time < 30) {
+		speed *= 3;
+	}
 	my_cannons.back().speed = speed;
-	my_cannons.back().gravity = 100.0f;
+	my_cannons.back().gravity = 500.0f;
 	my_cannons.back().radius = scale;
 	my_cannons.back().update_modelMatrix();
 }
@@ -2312,7 +2314,7 @@ void TrainView::initTextRender() {
 }
 
 void TrainView::startGame() {
-	game_time = 120;
+	game_time = 60;
 	playing = true;
 	win = false;
 	lose = false;
