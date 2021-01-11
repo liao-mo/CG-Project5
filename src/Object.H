@@ -64,6 +64,37 @@ public:
 	}
 };
 
+class Titan :public Base_Object {
+public:
+	Titan(string file_name) : Base_Object(file_name) {
+
+	}
+	float radius;
+	float distance;
+	glm::vec3 centralPoint;
+	float speed = 1.0f;
+	float delta_t = 0;
+	float angle = 0;
+	void move() {
+		angle += delta_t * speed;
+		float x = distance * cos(angle);
+		float z = distance * sin(angle);
+		pos.x = x;
+		pos.z = z;
+
+		update_modelMatrix();
+	}
+};
+
+class Cannon :public Base_Object {
+public:
+	Cannon(string file_name) : Base_Object(file_name) {
+
+	}
+	float gravity;
+	glm::vec3 speed;
+};
+
 struct Light_Source {
 	int type = DIRECTIONAL_LIGHT;
 

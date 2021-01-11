@@ -203,24 +203,36 @@ class TrainView : public Fl_Gl_Window
 		Model* my_cyborg = nullptr;
 		Model* my_brick_wall = nullptr;
 		vector<Base_Object> my_trees;
-		vector<Base_Object> my_titans;
 		vector<Light_object> my_light_objects;
-		std::vector<Model*> scene_models;
 		unsigned int num_of_car;
 		bool initTree = true;
-		bool initTitan = true;
 		bool initLightObject = true;
 		void loadModels();
 		void loadTrees();
 		void drawTeapot();
 		void drawTrees();
 		void addTree();
-		void drawTitans();
 		void drawLightObjects();
 		void drawCyborg();
 		void drawBrickWall();
 		void drawBrickWall2();
 		void deleteSelectedObject();
+
+		//cannon system
+		const int MAX_NR_CANNON = 5;
+		const int INIT_NR_TITAN = 10;
+		bool initTitan = true;
+		vector<Titan*> my_titans;
+		Titan* my_titan1;
+		Titan* my_titan2;
+		Titan* my_titan3;
+		vector<Cannon> my_cannons;
+		void initTitans();
+		void initCannons();
+		void launchCannon();
+		void checkHitTitans();
+		void drawTitans();
+		void drawCannons();
 
 		//water
 		WaterMesh* waterMesh = nullptr;

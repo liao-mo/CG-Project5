@@ -62,8 +62,8 @@ add_executable(WaterSurface
     ${SRC_DIR}WaterMesh.h
     ${SRC_DIR}SkyBox.h
     ${SRC_DIR}FrameBuffer.h
-    ${SRC_DIR}My_functions.H
-    ${SRC_DIR}Particle_system.H
+    ${SRC_DIR}My_functions.h
+    ${SRC_DIR}Particle_system.h
 
     ${SRC_DIR}main.cpp
     ${SRC_DIR}CallBacks.cpp
