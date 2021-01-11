@@ -269,3 +269,7 @@ void delObject(Fl_Widget*, TrainWindow* tw) {
 void addTree(Fl_Widget*, TrainWindow* tw) {
 	tw->trainView->addTree();
 }
+
+void startGame(Fl_Widget*, TrainWindow* tw) {
+	tw->trainView->startGame();
+}

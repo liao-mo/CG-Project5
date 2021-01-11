@@ -44,7 +44,7 @@ TrainWindow(const int x, const int y)
 		pty+=25;
 
 		speed = new Fl_Value_Slider(655,pty,140,20,"speed");
-		speed->range(0,10);
+		speed->range(0,50);
 		speed->value(2);
 		speed->align(FL_ALIGN_LEFT);
 		speed->type(FL_HORIZONTAL);
@@ -107,6 +107,13 @@ TrainWindow(const int x, const int y)
 		togglify(pickObjects, 0);
 		deleteObjects = new Fl_Button(700, pty, 100, 20, "Delete");
 		deleteObjects->callback((Fl_Callback*)delObject, this);
+		pty += 30;
+
+		treeSize = new Fl_Value_Slider(655, pty, 140, 20, "Tree Size");
+		treeSize->range(10, 100);
+		treeSize->value(100);
+		treeSize->align(FL_ALIGN_LEFT);
+		treeSize->type(FL_HORIZONTAL);
 		pty += 30;
 
 		AddTree = new Fl_Button(605, pty, 100, 20, "Add Tree");
@@ -191,26 +198,9 @@ TrainWindow(const int x, const int y)
 		delete_car->callback((Fl_Callback*)delCar, this);
 		pty += 30;
 
-
-
-
-		//pixelation = new Fl_Button(605, pty, 80, 20, "Pixelation");
-		//togglify(pixelation);
-
-		//pty += 30;
-
-		//offset = new Fl_Button(605, pty, 80, 20, "Offset");
-		//togglify(offset);
-
-		//pty += 30;
-
-		//grayscale = new Fl_Button(605, pty, 80, 20, "Grayscale");
-		//togglify(grayscale);
-
-		//pty += 30;
-
-		// TODO: add widgets for all of your fancier features here
-
+		start_game = new Fl_Button(700, pty, 80, 20, "Start Game");
+		start_game->callback((Fl_Callback*)startGame, this);
+		pty += 30;
 
 		// we need to make a little phantom widget to have things resize correctly
 		Fl_Box* resizebox = new Fl_Box(600,595,200,5);

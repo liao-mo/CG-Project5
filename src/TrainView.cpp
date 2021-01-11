@@ -1,4 +1,4 @@
-#include <iostream>
+ï»¿#include <iostream>
 #include <fstream>
 #include <vector>
 #include <sstream>
@@ -225,48 +225,27 @@ void TrainView::draw()
 {
 	//calculate delta time
 	updateTimer();
-
 	// * Set up basic opengl informaiton
 	//initialized glad
 	if (gladLoadGL())
 	{
 		//initiailize VAO, VBO, Shader...
-
-		//load shaders
 		loadShaders();
-
-		//initialize particle system
 		initParticleSystem();
-
-		//load titans
-		initTitans();
-
-		//load models
-		loadModels();
-
-		//load water object
 		loadWaterMesh();
-
-		//load skyBox object
+		initTitans();
+		initCannons();
+		initTextRender();
+		loadModels();
 		loadSkyBox();
-
-		//initialize FBOs
 		initFBOs();
-
-		//initialize VAOs
 		initVAOs();
-
 		//original functions
 		initUBO();
-
 		initPlane();
-		
 		loadTextures();
-
 		initTrackData();
-
 		initSound();
-
 		initRun();
 	}
 	else
@@ -281,10 +260,8 @@ void TrainView::draw()
 	glClearStencil(0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glEnable(GL_DEPTH);
-
 	// Blayne prefers GL_DIFFUSE
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-
 	// prepare for projection
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -294,10 +271,8 @@ void TrainView::draw()
 	// enable the lighting
 	glEnable(GL_COLOR_MATERIAL);
 	glEnable(GL_DEPTH_TEST);
-
 	// set linstener position 
-	updateListenerPos();
-	
+	updateListenerPos();	
 	// now draw the ground plane
 	glUseProgram(0);
 	//setupFloor();
@@ -310,49 +285,36 @@ void TrainView::draw()
 	//use shader===========================================================================================================
 	setUBO();
 	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
-
 	//update current light_shader
 	update_light_shaders();
-
 	//drawMainFBO();
-
 	//drawSubScreenFBO();
 
-	//drawTeapot();
-
+	drawTeapot();
 	drawTrees();
-
 	drawTitans();
-	
+	drawCannons();
 	draw_track();
-
 	draw_sleeper();
-
 	draw_train();
-
 	draw_cars();
-
 	updateLightSource();
 	drawLightObjects();
-
 	drawBrickWall();
-
 	drawBrickWall2();
-
 	//drawCyborg();
-
 	draw_terrain();
-
 	drawWater(tw->waveTypeBrowser->value());
-
 	drawSkyBox();
-
+	drawText();
 	//draw main FBO to the whole screen
 	//drawMainScreen();
 	//drawSubScreen();
-
 	glBindVertexArray(0);
 	glUseProgram(0);
+
+	//other stuff
+	checkScoreAndTime();
 }
 
 void TrainView::
@@ -723,7 +685,7 @@ void TrainView::draw_track() {
 		glm::vec3 orient_t0_v = all_orient[i];
 
 		glLineWidth(5);
-		float scale_value = 1.0f;
+		float scale_value = 2.0f;
 
 		mat4 rotate = glm::inverse(glm::lookAt(
 			qt0_v,
@@ -763,7 +725,7 @@ void TrainView::draw_sleeper() {
 
 		glm::vec3 orient_t0_v = all_orient[i];
 
-		float scale_value = 5.0f;
+		float scale_value = 8.0f;
 		mat4 rotate = glm::inverse(glm::lookAt(
 			qt0_v,
 			qt1_v,
@@ -799,7 +761,6 @@ void TrainView::draw_train() {
 	else {
 		i = C_length_index();
 	}
-	float t0 = t_param[i];
 
 	glm::vec3 qt0_v = all_qt[i];
 	glm::vec3 qt1_v;
@@ -810,7 +771,7 @@ void TrainView::draw_train() {
 	glm::vec3 forward = all_forward[i];
 
 	float up_offset = 0.0f;
-	float scale_value = 1.5f;
+	float scale_value = 2.0f;
 
 	mat4 rotate = glm::inverse(glm::lookAt(qt0_v, qt1_v, orient_t0_v));
 
@@ -951,15 +912,59 @@ void TrainView::drawTrees() {
 void TrainView::drawTitans() {
 	standard_shader->use();
 	for (int i = 0; i < my_titans.size(); ++i) {
-		standard_shader->setMat4("model", my_titans[i]->model_matrix);
-		my_titans[i]->model->Draw(*standard_shader);
-		my_titans[i]->move();
+		standard_shader->setMat4("model", my_titans[i].model_matrix);
+		my_titans[i].model->Draw(*standard_shader);
+		my_titans[i].delta_t = delta_t;
+		my_titans[i].move();
+	}
+
+	for (auto it1 = my_titans.begin(); it1 != my_titans.end(); ++it1) {
+		for (auto it2 = my_cannons.begin(); it2 != my_cannons.end(); ++it2) {
+			if (checkCollision(it1->pos, it1->radius, it2->pos,it2->radius)) {
+				//delete the titan and the cannon
+				cout << "hit!" << endl;
+				my_titans.erase(it1--);
+				my_cannons.erase(it2--);
+				break;
+			}
+		}
 	}
 	glUseProgram(0);
 }
 
 void TrainView::drawCannons() {
+	standard_shader->use();
+	for (auto it = my_cannons.begin(); it != my_cannons.end(); ++it) {
+		standard_shader->setMat4("model", it->model_matrix);
+		it->model->Draw(*standard_shader);
+		it->delta_t = delta_t;
+		it->move();
+		if (it->pos.y < -100) {
+			//delete this cannon
+			my_cannons.erase(it--);
+		}
+	}
+	glUseProgram(0);
+}
 
+void TrainView::drawText() {
+	if (playing) {
+		textRender->setScreenSize(w(), h());
+		string text = "There are " + to_string(my_titans.size()) + " titans still standing, let them sit down!";
+		textRender->RenderText(text, 100.0f, 700.0, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
+		text = "Press F to launch anti titan cannon!";
+		textRender->RenderText(text, 100.0f, 600.0, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
+		text = "Time left: " + to_string(game_time);
+		textRender->RenderText(text, 100.0f, 500.0, 1.0f, glm::vec3(0.5, 0.8f, 0.2f));
+	}
+	if (win) {
+		string text = "Congratulation! Now it's your time to ruin other countries...";
+		textRender->RenderText(text, 100.0f, 700.0, 1.0f, glm::vec3(0.5, 0.0f, 0.0f));
+	}
+	if(lose) {
+		string text = "You lose! Titans will eat your mom...";
+		textRender->RenderText(text, 100.0f, 700.0, 1.0f, glm::vec3(0.5, 0.0f, 0.0f));
+	}
 }
 
 void TrainView::drawLightObjects() {
@@ -1050,17 +1055,15 @@ void TrainView::drawBrickWall2() {
 	parallaxMapping_shader->setInt("normalMap", 1);
 	parallaxMapping_shader->setInt("depthMap", 2);
 
-	glm::vec3 lightPos = light_sources[4].position;
-	lightPos = 50.0f * glm::normalize(lightPos);
+	glm::vec3 lightPos = light_sources[0].direction;
+	lightPos = glm::vec3(-390, 30, 0) + 100.0f * glm::normalize(lightPos);
 	float heightScale = 0.1;
 
 	parallaxMapping_shader->use();
-	//glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)w() / (float)h(), 0.1f, 100.0f);
 	parallaxMapping_shader->setMat4("projection", projectionMatrix);
 	parallaxMapping_shader->setMat4("view", viewMatrix);
 	// render parallax-mapped quad
 	glm::mat4 model = glm::mat4(1.0f);
-	//model = glm::rotate(model, glm::radians((float)now_t / 1000.0f * -10.0f), glm::normalize(glm::vec3(1.0, 0.0, 1.0)));
 	model = glm::translate(model, glm::vec3(-390, 30, 0));
 	model = glm::scale(model, glm::vec3(100,100,100));
 	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1, 0, 0));
@@ -1075,6 +1078,42 @@ void TrainView::drawBrickWall2() {
 	glBindTexture(GL_TEXTURE_2D, brick2_normalMap);
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D, brick2_heightMap);
+	renderQuad();
+
+	lightPos = glm::vec3(-390, 30, 200) + 100.0f * glm::normalize(lightPos);
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-390, 30, 200));
+	model = glm::scale(model, glm::vec3(100, 100, 100));
+	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1, 0, 0));
+	model = glm::rotate(model, glm::radians(-15.0f), glm::vec3(0, 1, 0));
+	parallaxMapping_shader->setMat4("model", model);
+	parallaxMapping_shader->setVec3("viewPos", camera.Position);
+	parallaxMapping_shader->setVec3("lightPos", lightPos);
+	parallaxMapping_shader->setFloat("heightScale", heightScale);
+	renderQuad();
+
+	lightPos = glm::vec3(-390, 30, 400) + 100.0f * glm::normalize(lightPos);
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-390, 30, 400));
+	model = glm::scale(model, glm::vec3(100, 100, 100));
+	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1, 0, 0));
+	model = glm::rotate(model, glm::radians(-15.0f), glm::vec3(0, 1, 0));
+	parallaxMapping_shader->setMat4("model", model);
+	parallaxMapping_shader->setVec3("viewPos", camera.Position);
+	parallaxMapping_shader->setVec3("lightPos", lightPos);
+	parallaxMapping_shader->setFloat("heightScale", heightScale);
+	renderQuad();
+
+	lightPos = glm::vec3(-390, 30, 600) + 100.0f * glm::normalize(lightPos);
+	model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-390, 30, 600));
+	model = glm::scale(model, glm::vec3(100, 100, 100));
+	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1, 0, 0));
+	model = glm::rotate(model, glm::radians(-15.0f), glm::vec3(0, 1, 0));
+	parallaxMapping_shader->setMat4("model", model);
+	parallaxMapping_shader->setVec3("viewPos", camera.Position);
+	parallaxMapping_shader->setVec3("lightPos", lightPos);
+	parallaxMapping_shader->setFloat("heightScale", heightScale);
 	renderQuad();
 
 	glActiveTexture(GL_TEXTURE0);
@@ -1133,32 +1172,32 @@ void TrainView::loadShaders() {
 void TrainView::loadModels() {
 	if (!my_track) {
 		cout << "loading track..." << endl;
-		my_track = new Model(FileSystem::getPath("resources/objects/track/track.obj"));
+		my_track = new Model("../resources/objects/track/track.obj");
 	}
 	if (!my_sleeper) {
 		cout << "loading sleeper..." << endl;
-		my_sleeper = new Model(FileSystem::getPath("resources/objects/sleeper/sleeper.obj"));
+		my_sleeper = new Model("../resources/objects/sleeper/sleeper.obj");
 	}
 	if (!sci_fi_train) {
 		cout << "loading train..." << endl;
-		sci_fi_train = new Model(FileSystem::getPath("resources/objects/Sci_fi_Train/Sci_fi_Train.obj"));
+		sci_fi_train = new Model("../resources/objects/Sci_fi_Train/Sci_fi_Train.obj");
 	}
 	if (!my_car) {
 		cout << "loading train car..." << endl;
-		my_car = new Model(FileSystem::getPath("resources/objects/train_car/train_car.obj"));
-		my_car = new Model(FileSystem::getPath("resources/objects/planet/planet.obj"));
+		//my_car = new Model("../resources/objects/train_car/train_car.obj"));
+		my_car = new Model("../resources/objects/planet/planet.obj");
 	}
 	if (!teapot) {
 		cout << "loading teapot..." << endl;
-		teapot = new Model(FileSystem::getPath("resources/objects/teapot/teapot.obj"));
+		teapot = new Model("../resources/objects/teapot/teapot.obj");
 	}
 	if (!my_terrain) {
 		cout << "loading terrain..." << endl;
-		my_terrain = new Model(FileSystem::getPath("resources/objects/terrain/terrain.obj"));
+		my_terrain = new Model("../resources/objects/terrain/terrain.obj");
 	}
 	if (!my_cyborg) {
 		cout << "loading cyborg..." << endl;
-		my_cyborg = new Model(FileSystem::getPath("resources/objects/cyborg/cyborg.obj"));
+		my_cyborg = new Model("../resources/objects/cyborg/cyborg.obj");
 	}
 	if (initTree) {
 		initTree = false;
@@ -1167,7 +1206,7 @@ void TrainView::loadModels() {
 	if (initLightObject) {
 		cout << "loading light objects..." << endl;
 		initLightObject = false;
-		Light_object temp_obj(FileSystem::getPath("resources/objects/sun/sun.obj"));
+		Light_object temp_obj("../resources/objects/sun/sun.obj");
 		for (int i = 0; i < NR_LIGHT; ++i) {
 			if (light_sources[i].type == POINT_LIGHT) {
 				my_light_objects.push_back(temp_obj);
@@ -1181,12 +1220,12 @@ void TrainView::loadModels() {
 }
 
 void TrainView::loadTrees() {
-	fstream tree_file("../src/tree_pos.txt");
+	fstream tree_file("../TrackFiles/tree_pos.txt");
 	if (!tree_file) cout << "tree file error" << endl;
 	cout << "loading tree1..." << endl;
-	Base_Object temp_tree1(FileSystem::getPath("resources/objects/tree1/JASMIM+MANGA.obj"));
+	Base_Object temp_tree1("../resources/objects/tree1/JASMIM+MANGA.obj");
 	cout << "loading tree2..." << endl;
-	Base_Object temp_tree2(FileSystem::getPath("resources/objects/tree2/tree2.obj"));
+	Base_Object temp_tree2("../resources/objects/tree2/tree2.obj");
 
 	string line;
 	while (getline(tree_file, line)) {
@@ -1207,6 +1246,7 @@ void TrainView::loadTrees() {
 		ss >> scale;
 		my_trees.back().scaleVal = glm::vec3(scale);
 		ss >> my_trees.back().rotation_angle >> my_trees.back().rotation_axis.x >> my_trees.back().rotation_axis.y >> my_trees.back().rotation_axis.z;
+		
 		my_trees.back().update_modelMatrix();
 	}
 
@@ -1214,6 +1254,7 @@ void TrainView::loadTrees() {
 	my_trees.back().pos = vec3(0, 0, 0);
 	my_trees.back().scaleVal = glm::vec3(10); 
 	my_trees.back().update_modelMatrix();
+	cout << my_trees.size() << endl;
 }
 
 void TrainView::loadTextures() {
@@ -1606,7 +1647,7 @@ void TrainView::update_arcLengh() {
 			glm::vec3 qt1_v(qts[1].x, qts[1].y, qts[1].z);
 			glm::vec3 forward = qt1_v - qt0_v;
 
-			//forward ¥i¥H§ï¤@¤U¡A¹J¨ìÃä¬ÉµLªk¸ó«×¨â­Ó½u¬q
+			//forward å¯ä»¥æ”¹ä¸€ä¸‹ï¼Œé‡åˆ°é‚Šç•Œç„¡æ³•è·¨åº¦å…©å€‹ç·šæ®µ
 			forward = glm::normalize(forward);
 
 			Pnt3f orient_t0 = find_orient(cp_orient_p0, cp_orient_p1, t0);
@@ -1715,7 +1756,7 @@ void TrainView::initSound() {
 	if (!this->device) {
 		this->device = alcOpenDevice(NULL);
 		if (!this->device) {
-			puts("ERROR::NO_AUDIO_DEVICE");
+			//puts("ERROR::NO_AUDIO_DEVICE");
 		}
 		ALboolean enumeration = alcIsExtensionPresent(NULL, "ALC_ENUMERATION_EXT");
 		this->context = alcCreateContext(this->device, NULL);
@@ -1841,41 +1882,42 @@ void TrainView::deleteSelectedObject() {
 }
 
 void TrainView::addTree() {
-	Base_Object temp_tree(FileSystem::getPath("resources/objects/tree1/JASMIM+MANGA.obj"));
+	Base_Object temp_tree(FileSystem::getPath("resources/objects/tree2/tree2.obj"));
 	my_trees.push_back(temp_tree);
 	my_trees.back().pos = glm::vec3(0, 200, 0);
+	my_trees.back().scaleVal = glm::vec3(tw->treeSize->value(), tw->treeSize->value(), tw->treeSize->value());
 	my_trees.back().update_modelMatrix();
 }
 
 void TrainView::initLightSource() {
 	light_sources[0].type = DIRECTIONAL_LIGHT;
 	light_sources[0].direction = glm::vec3(0, -1, 0);
-	light_sources[0].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
+	light_sources[0].ambient = glm::vec3(0.1f, 0.1f, 0.1f);
 	light_sources[0].diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
 	light_sources[0].specular = glm::vec3(0.5f, 0.5f, 0.5f);
 
 	light_sources[1].type = DIRECTIONAL_LIGHT;
 	light_sources[1].direction = glm::vec3(0.1, -1, 0);
-	light_sources[1].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
-	light_sources[1].diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
-	light_sources[1].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+	light_sources[1].ambient = glm::vec3(0.0f, 0.0f, 0.0f);
+	light_sources[1].diffuse = glm::vec3(0.0f, 0.0f, 0.0f);
+	light_sources[1].specular = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	light_sources[2].type = DIRECTIONAL_LIGHT;
 	light_sources[2].direction = glm::vec3(-0.1, -1, 0);
-	light_sources[2].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
-	light_sources[2].diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
-	light_sources[2].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+	light_sources[2].ambient = glm::vec3(0.0f, 0.0f, 0.0f);
+	light_sources[2].diffuse = glm::vec3(0.0f, 0.0f, 0.0f);
+	light_sources[2].specular = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	light_sources[3].type = DIRECTIONAL_LIGHT;
 	light_sources[3].direction = glm::vec3(0, -1, -0.1);
-	light_sources[3].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
-	light_sources[3].diffuse = glm::vec3(0.4f, 0.4f, 0.4f);
-	light_sources[3].specular = glm::vec3(0.5f, 0.5f, 0.5f);
+	light_sources[2].ambient = glm::vec3(0.0f, 0.0f, 0.0f);
+	light_sources[2].diffuse = glm::vec3(0.0f, 0.0f, 0.0f);
+	light_sources[2].specular = glm::vec3(0.0f, 0.0f, 0.0f);
 
 	light_sources[4].type = POINT_LIGHT;
 	light_sources[4].position = glm::vec3(0.0f, 5000.0, 0.0f);
 	light_sources[4].ambient = glm::vec3(0.05f, 0.05f, 0.05f);
-	light_sources[4].diffuse = glm::vec3(3.0f, 2.8f, 2.7f);
+	light_sources[4].diffuse = glm::vec3(5.0f, 4.0f, 4.0f);
 	light_sources[4].specular = glm::vec3(1.0f, 1.0f, 1.0f);
 	light_sources[4].constant = 0.05f;
 	light_sources[4].linear = 0.001;
@@ -1922,7 +1964,7 @@ void TrainView::initLightSource() {
 }
 
 void TrainView::updateLightSource() {
-	float radius = 5000.0;
+	float radius = 20000.0;
 	float speed = 0.01;
 	float x = radius * cos((now_t / 1000.0) * speed);
 	float y = radius * sin((now_t / 1000.0) * speed);
@@ -1933,15 +1975,20 @@ void TrainView::updateLightSource() {
 	my_light_objects[0].pos = light_sources[4].position;
 	my_light_objects[0].update_modelMatrix();
 	if (y >= 0) {
-		light_sources[4].constant = 0.05f;
+		/*light_sources[4].constant = 0.05f;
 		light_sources[4].linear = 0.001;
-		light_sources[4].quadratic = 0.0;
+		light_sources[4].quadratic = 0.0;*/
+		light_sources[4].constant = 1.0f;
+		light_sources[4].linear = 1.0;
+		light_sources[4].quadratic = 1.0;
 	}
 	else {
 		light_sources[4].constant = 1.0f;
 		light_sources[4].linear = 1.0;
 		light_sources[4].quadratic = 1.0;
 	}
+
+	light_sources[4].direction = -light_sources[4].position;
 
 }
 
@@ -2057,55 +2104,236 @@ void TrainView::initTrackData() {
 void TrainView::initTitans() {
 	if (initTitan) {
 		initTitan = false;
-		cout << "loading titan1..." << endl;
-		my_titan1 = new Titan("../resources/objects/titan/chou/chou.obj");
-		cout << "loading titan2..." << endl;
-		//my_titan2 = new Titan("../resources/objects/titan/aga/textured_output.obj");
-		cout << "loading titan3..." << endl;
-		//my_titan3 = new Titan("../resources/objects/titan/tsai/tsai.obj");
+		//cout << "loading titan1..." << endl;
+		//all_titans.push_back(Titan("../resources/objects/titan/chou/chou.obj"));
+		//cout << "loading titan2..." << endl;
+		//all_titans.push_back(Titan("../resources/objects/titan/aga/textured_output.obj"));
+		//cout << "loading titan3..." << endl;
+		//all_titans.push_back(Titan("../resources/objects/titan/tsai/tsai.obj"));
+
+
+		all_titans.push_back(Titan("../resources/objects/titan/fake/fake.obj"));
+		all_titans.push_back(Titan("../resources/objects/titan/fake/fake.obj"));
+		all_titans.push_back(Titan("../resources/objects/titan/fake/fake.obj"));
 
 		my_titans.clear();
 		for (int i = 0; i < INIT_NR_TITAN; ++i) {
 			int randnum = rand() % 3;
-			randnum = 0; //debug
+			//randnum = 0; //debug
 			if (randnum == 0) {
-				my_titans.push_back(my_titan1);
-				float distance = 5000 + rand() % 3000;
+				my_titans.push_back(all_titans[0]);
+				float distance = 7000 + rand() % 20000;
 				float angle = glm::radians(float(rand() % 360));
 				float x = distance * cos(angle);
 				float z = distance * sin(angle);
 
-				float speed = 1.0 + (rand() % 100) / 100.0;
+				float speed = 1.0 + (rand() % 100) / 500.0;
 
-				float scale = 100 + rand() % 100;
-				my_titans.back()->distance = distance;
-				my_titans.back()->pos = glm::vec3(x, scale / 2.0f, z);
-				my_titans.back()->centralPoint = my_titans.back()->pos;
-				my_titans.back()->scaleVal = glm::vec3(scale, scale, scale);
-				my_titans.back()->radius = 0.6 * scale;
-				my_titans.back()->speed = speed;
-				my_titans.back()->angle = angle;
-				my_titans.back()->delta_t = 0;
-				my_titans.back()->update_modelMatrix();
+				float scale = 1000 + rand() % 1000;
+				my_titans.back().distance = distance;
+				my_titans.back().pos = glm::vec3(x, scale / 2.0f, z);
+				my_titans.back().centralPoint = my_titans.back().pos;
+				my_titans.back().scaleVal = glm::vec3(scale, scale, scale);
+				my_titans.back().radius = 0.6 * scale;
+				my_titans.back().speed = speed;
+				my_titans.back().angle = angle;
+				my_titans.back().delta_t = 0;
+				my_titans.back().rotation_angle = rand() % 360;
+				my_titans.back().rotateSpeed = 0.1 + (rand()%100) / 1000;
+				my_titans.back().rotation_axis = glm::vec3(0, 1, 0);
+				my_titans.back().update_modelMatrix();
 			}
-			else if (randnum = 1) {
-				my_titans.push_back(my_titan2);
+			else if (randnum == 1) {
+				my_titans.push_back(all_titans[1]);
+				float distance = 7000 + rand() % 20000;
+				float angle = glm::radians(float(rand() % 360));
+				float x = distance * cos(angle);
+				float z = distance * sin(angle);
+
+				float speed = 1.5 + (rand() % 100) / 100.0;
+
+				float scale = 1000 + rand() % 1000;
+				my_titans.back().distance = distance;
+				my_titans.back().pos = glm::vec3(x, scale / 2.0f, z);
+				my_titans.back().centralPoint = my_titans.back().pos;
+				my_titans.back().scaleVal = glm::vec3(scale, scale, scale);
+				my_titans.back().radius = 0.6 * scale;
+				my_titans.back().speed = speed;
+				my_titans.back().angle = angle;
+				my_titans.back().delta_t = 0;
+				my_titans.back().rotation_angle = rand() % 360;
+				my_titans.back().rotateSpeed = 0.3 + (rand() % 100) / 700;
+				my_titans.back().rotation_axis = glm::vec3(0, 1, 0);
+				my_titans.back().update_modelMatrix();
 			}
-			else if (randnum = 2) {
-				my_titans.push_back(my_titan3);
+			else if (randnum == 2) {
+				my_titans.push_back(all_titans[2]);
+				float distance = 6000 + rand() % 5000;
+				float angle = glm::radians(float(rand() % 360));
+				float x = distance * cos(angle);
+				float z = distance * sin(angle);
+
+				float speed = 1.0 + (rand() % 100) / 300.0;
+
+				float scale = 800 + rand() % 800;
+				my_titans.back().distance = distance;
+				my_titans.back().pos = glm::vec3(x, scale / 1.5f, z);
+				my_titans.back().centralPoint = my_titans.back().pos;
+				my_titans.back().scaleVal = glm::vec3(scale, scale, scale);
+				my_titans.back().radius = 0.6 * scale;
+				my_titans.back().speed = speed;
+				my_titans.back().angle = angle;
+				my_titans.back().delta_t = 0;
+				my_titans.back().rotation_angle = rand() % 360;
+				my_titans.back().rotateSpeed = 0.05 + (rand() % 100) / 1000;
+				my_titans.back().rotation_axis = glm::vec3(0, 1, 0);
+				my_titans.back().update_modelMatrix();
 			}
 		}
 	}
 }
 
+void TrainView::reloadTitans() {
+	my_titans.clear();
+	for (int i = 0; i < INIT_NR_TITAN; ++i) {
+		int randnum = rand() % 3;
+		//randnum = 0; //debug
+		if (randnum == 0) {
+			my_titans.push_back(all_titans[0]);
+			float distance = 7000 + rand() % 20000;
+			float angle = glm::radians(float(rand() % 360));
+			float x = distance * cos(angle);
+			float z = distance * sin(angle);
+
+			float speed = 1.0 + (rand() % 100) / 500.0;
+
+			float scale = 1000 + rand() % 1000;
+			my_titans.back().distance = distance;
+			my_titans.back().pos = glm::vec3(x, scale / 2.0f, z);
+			my_titans.back().centralPoint = my_titans.back().pos;
+			my_titans.back().scaleVal = glm::vec3(scale, scale, scale);
+			my_titans.back().radius = 0.6 * scale;
+			my_titans.back().speed = speed;
+			my_titans.back().angle = angle;
+			my_titans.back().delta_t = 0;
+			my_titans.back().rotation_angle = rand() % 360;
+			my_titans.back().rotateSpeed = 0.1 + (rand() % 100) / 1000;
+			my_titans.back().rotation_axis = glm::vec3(0, 1, 0);
+			my_titans.back().update_modelMatrix();
+		}
+		else if (randnum == 1) {
+			my_titans.push_back(all_titans[1]);
+			float distance = 7000 + rand() % 20000;
+			float angle = glm::radians(float(rand() % 360));
+			float x = distance * cos(angle);
+			float z = distance * sin(angle);
+
+			float speed = 1.5 + (rand() % 100) / 100.0;
+
+			float scale = 1000 + rand() % 1000;
+			my_titans.back().distance = distance;
+			my_titans.back().pos = glm::vec3(x, scale / 2.0f, z);
+			my_titans.back().centralPoint = my_titans.back().pos;
+			my_titans.back().scaleVal = glm::vec3(scale, scale, scale);
+			my_titans.back().radius = 0.6 * scale;
+			my_titans.back().speed = speed;
+			my_titans.back().angle = angle;
+			my_titans.back().delta_t = 0;
+			my_titans.back().rotation_angle = rand() % 360;
+			my_titans.back().rotateSpeed = 0.3 + (rand() % 100) / 700;
+			my_titans.back().rotation_axis = glm::vec3(0, 1, 0);
+			my_titans.back().update_modelMatrix();
+		}
+		else if (randnum == 2) {
+			my_titans.push_back(all_titans[2]);
+			float distance = 6000 + rand() % 5000;
+			float angle = glm::radians(float(rand() % 360));
+			float x = distance * cos(angle);
+			float z = distance * sin(angle);
+
+			float speed = 1.0 + (rand() % 100) / 300.0;
+
+			float scale = 800 + rand() % 800;
+			my_titans.back().distance = distance;
+			my_titans.back().pos = glm::vec3(x, scale / 1.5f, z);
+			my_titans.back().centralPoint = my_titans.back().pos;
+			my_titans.back().scaleVal = glm::vec3(scale, scale, scale);
+			my_titans.back().radius = 0.6 * scale;
+			my_titans.back().speed = speed;
+			my_titans.back().angle = angle;
+			my_titans.back().delta_t = 0;
+			my_titans.back().rotation_angle = rand() % 360;
+			my_titans.back().rotateSpeed = 0.05 + (rand() % 100) / 1000;
+			my_titans.back().rotation_axis = glm::vec3(0, 1, 0);
+			my_titans.back().update_modelMatrix();
+		}
+	}
+}
+
 void TrainView::initCannons() {
-	
+	if (initCannon) {
+		initCannon = false;
+		all_cannons.push_back(Cannon("../resources/objects/cannon/cannon.obj"));
+	}
 }
 
 void TrainView::launchCannon() {
+	if (!(my_cannons.size() <= MAX_NR_CANNON)) {
+		return;
+	}
 	cout << "lauching a cannon..." << endl;
+	my_cannons.push_back(all_cannons[0]);
+	size_t i;
+	if (tw->arcLength->value() == 0) {
+		i = int(m_pTrack->trainU / 1) * DIVIDE_LINE;
+		i = i + (m_pTrack->trainU - int(m_pTrack->trainU / 1)) * DIVIDE_LINE - 0.1;
+		if (i < 0) {
+			i = (float)m_pTrack->points.size() - i;
+		}
+	}
+	else {
+		i = C_length_index();
+	}
+	glm::vec3 qt0_v = all_qt[i];
+	my_cannons.back().pos = qt0_v;
+	float scale = 25.0f;
+	my_cannons.back().scaleVal = glm::vec3(scale, scale, scale);
+	glm::vec3 speed = 3000.0f * camera.Front;
+	my_cannons.back().speed = speed;
+	my_cannons.back().gravity = 100.0f;
+	my_cannons.back().radius = scale;
+	my_cannons.back().update_modelMatrix();
 }
 
-void TrainView::checkHitTitans() {
+void TrainView::initTextRender() {
+	if (!textRender) {
+		textRender = new TextRender();
+	}
+}
 
+void TrainView::startGame() {
+	game_time = 120;
+	playing = true;
+	win = false;
+	lose = false;
+	reloadTitans();
+	tw->worldCam->clear();
+	tw->topCam->clear();
+	tw->trainCam->set();
+	tw->speed->value(30);
+}
+
+void TrainView::checkScoreAndTime() {
+	if (!playing)return;
+	game_time -= delta_t;
+	if (game_time <= 0) {
+		game_time = 0;
+		playing = false;
+		if (my_titans.size() > 0) {
+			lose = true;
+		}
+		else {
+			lose = true;
+		}
+	}
 }

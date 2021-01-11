@@ -322,3 +322,13 @@ unsigned int loadTexture(char const* path)
 
 	return textureID;
 }
+
+//sphere collision check
+bool checkCollision(glm::vec3 pos1, float radius1, glm::vec3 pos2, float radius2) {
+	if (glm::distance(pos1, pos2) < (radius1 + radius2)) {
+		return true;
+	}
+	else {
+		return false;
+	}
+}

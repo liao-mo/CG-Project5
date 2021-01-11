@@ -96,6 +96,7 @@ class TrainWindow : public Fl_Double_Window {
 		Fl_Button* deleteObjects;
 
 		//Add a new Tree
+		Fl_Value_Slider* treeSize;
 		Fl_Button* AddTree;
 
 		// the type of the spline (use its value to determine)
@@ -131,4 +132,7 @@ class TrainWindow : public Fl_Double_Window {
 		Fl_Button* add_car;
 		// delete a car
 		Fl_Button* delete_car;
+
+		//start kill titan game
+		Fl_Button* start_game;
 };

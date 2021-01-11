@@ -69,3 +69,6 @@ void delObject(Fl_Widget*, TrainWindow* tw);
 
 //add a new tree
 void addTree(Fl_Widget*, TrainWindow* tw);
+
+//start game
+void startGame(Fl_Widget*, TrainWindow* tw);

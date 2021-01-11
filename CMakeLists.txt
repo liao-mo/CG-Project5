@@ -31,7 +31,9 @@ set(SRC_SHADER
     ${SRC_DIR}shaders/normal_mapping.vert
     ${SRC_DIR}shaders/normal_mapping.frag
     ${SRC_DIR}shaders/parallax_mapping.vert
-    ${SRC_DIR}shaders/parallax_mapping.frag)
+    ${SRC_DIR}shaders/parallax_mapping.frag
+    ${SRC_DIR}shaders/text.vert
+    ${SRC_DIR}shaders/text.frag)
 
 set(SRC_RENDER_UTILITIES
     ${SRC_DIR}RenderUtilities/BufferObject.h
@@ -64,6 +66,7 @@ add_executable(WaterSurface
     ${SRC_DIR}FrameBuffer.h
     ${SRC_DIR}My_functions.h
     ${SRC_DIR}Particle_system.h
+    ${SRC_DIR}TextRendering.h
 
     ${SRC_DIR}main.cpp
     ${SRC_DIR}CallBacks.cpp
@@ -75,6 +78,7 @@ add_executable(WaterSurface
     ${SRC_DIR}SkyBox.cpp
     ${SRC_DIR}FrameBuffer.cpp
     ${SRC_DIR}Particle_system.cpp
+    ${SRC_DIR}TextRendering.cpp
 
     ${SRC_SHADER}
     ${SRC_RENDER_UTILITIES}
@@ -114,7 +118,8 @@ target_link_libraries(WaterSurface
     debug ${LIB_DIR}Debug/opencv_world341d.lib optimized ${LIB_DIR}Release/opencv_world341.lib
     debug ${LIB_DIR}Debug/freeglutd.lib        optimized ${LIB_DIR}Release/freeglut.lib
     debug ${LIB_DIR}glfw3.lib                  optimized ${LIB_DIR}glfw3.lib
-    debug ${LIB_DIR}GLEW_1130.lib              optimized ${LIB_DIR}GLEW_1130.lib)
+    debug ${LIB_DIR}GLEW_1130.lib              optimized ${LIB_DIR}GLEW_1130.lib
+    debug ${LIB_DIR}freetype.lib               optimized ${LIB_DIR}freetype.lib)
 
 target_link_libraries(WaterSurface 
     ${LIB_DIR}OpenGL32.lib

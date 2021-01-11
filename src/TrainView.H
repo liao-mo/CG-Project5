@@ -14,6 +14,7 @@
 #include "FrameBuffer.h"
 #include "Object.H"
 #include "Particle_system.h"
+#include "TextRendering.h"
 
 // this uses the old ArcBall Code
 #include "Utilities/ArcBallCam.H"
@@ -24,7 +25,7 @@
 
 #define SCR_WIDTH 800
 #define SCR_HEIGHT 600
-#define NEAR 0.01
+#define NEAR 1
 #define FAR 99999.0
 #define DIVIDE_LINE 100
 #define NR_LIGHT 9
@@ -67,56 +68,38 @@ class TrainView : public Fl_Gl_Window
 		// it has to be encapsulated, since we draw differently if
 		// we're drawing shadows (no colors, for example)
 		void drawStuff(bool doingShadows=false);
-
 		//my function that draws the train
 		void draw_train();
-
 		//my function that draws the car
 		void draw_cars();
-
 		//my function that draws the track
 		void draw_track();
-
 		//my function that draws the sleeper
 		void draw_sleeper();
-
 		//my function that draws my terrain
 		void draw_terrain();
-
 		// setup the projection - assuming that the projection stack has been
 		// cleared for you
 		void setProjection();
-
 		// Reset the Arc ball control
 		void resetArcball();
-
 		// pick a point (for when the mouse goes down)
 		void doPick();
-
 		//set ubo
 		void setUBO();
 
 		//use current length to find parameter t
 		float length_to_t(float length);
-
 		//use current length to find current index
 		size_t length_to_index(float length);
-
 		//find current index by C_length
 		size_t C_length_index();
-
 		//find current index by trainU
 		size_t trainU_index();
-
 		//match current length and trainU
 		void match_length();
-
 		//match current trainU to length 
 		void match_trainU();
-
-		//draw object functions
-		//draw ground
-		void drawGround();
 
 		
 	public:
@@ -216,23 +199,30 @@ class TrainView : public Fl_Gl_Window
 		void drawCyborg();
 		void drawBrickWall();
 		void drawBrickWall2();
+		void drawGround();
 		void deleteSelectedObject();
 
 		//cannon system
 		const int MAX_NR_CANNON = 5;
-		const int INIT_NR_TITAN = 10;
+		const int INIT_NR_TITAN = 30;
+		bool initCannon = true;
 		bool initTitan = true;
-		vector<Titan*> my_titans;
-		Titan* my_titan1;
-		Titan* my_titan2;
-		Titan* my_titan3;
+		bool playing = false;
+		bool win = false;
+		bool lose = false;
+		vector<Titan> all_titans;
+		vector<Titan> my_titans;
+		vector<Cannon> all_cannons;
 		vector<Cannon> my_cannons;
 		void initTitans();
+		void reloadTitans();
 		void initCannons();
 		void launchCannon();
 		void checkHitTitans();
 		void drawTitans();
 		void drawCannons();
+		void startGame();
+		void checkScoreAndTime();
 
 		//water
 		WaterMesh* waterMesh = nullptr;
@@ -266,6 +256,7 @@ class TrainView : public Fl_Gl_Window
 		//timer
 		int old_t;
 		int now_t;
+		float game_time;
 		float delta_t;
 		void updateTimer();
 
@@ -296,4 +287,9 @@ class TrainView : public Fl_Gl_Window
 		void update_arcLengh();
 		bool initTrack = true;
 		void initTrackData();
+
+		//text render
+		TextRender* textRender = nullptr;
+		void initTextRender();
+		void drawText();
 };

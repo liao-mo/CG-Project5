@@ -52,7 +52,7 @@ public:
 	void update_modelMatrix() {
 		model_matrix = glm::mat4(1.0);
 		model_matrix = glm::translate(model_matrix, pos);
-		if(rotation_angle > 0.1) model_matrix = glm::rotate(model_matrix, glm::radians(rotation_angle), rotation_axis);
+		if(!rotation_angle == 0)model_matrix = glm::rotate(model_matrix, glm::radians(rotation_angle), rotation_axis);
 		model_matrix = glm::scale(model_matrix, glm::vec3(scaleVal));
 	}
 };
@@ -75,13 +75,14 @@ public:
 	float speed = 1.0f;
 	float delta_t = 0;
 	float angle = 0;
+	float rotateSpeed = 0;
 	void move() {
-		angle += delta_t * speed;
+		angle += delta_t * speed * 0.1;
 		float x = distance * cos(angle);
 		float z = distance * sin(angle);
 		pos.x = x;
 		pos.z = z;
-
+		rotation_angle += rotateSpeed;
 		update_modelMatrix();
 	}
 };
@@ -93,6 +94,15 @@ public:
 	}
 	float gravity;
 	glm::vec3 speed;
+	float delta_t = 0;
+	float radius;
+	void move() {
+		pos.x += speed.x * delta_t;
+		pos.y += speed.y * delta_t;
+		pos.z += speed.z * delta_t;
+		speed = speed - (delta_t * glm::vec3(0, gravity, 0));
+		update_modelMatrix();
+	}
 };
 
 struct Light_Source {
