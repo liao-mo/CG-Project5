@@ -83,7 +83,6 @@ class TrainWindow : public Fl_Double_Window {
 		// which viewpoint are we drawing from
 		Fl_Button*			worldCam;
 		Fl_Button*			trainCam;
-		Fl_Button*			topCam;
 
 		// which type of view to follow the train
 		Fl_Button* FPV;
@@ -116,14 +115,8 @@ class TrainWindow : public Fl_Double_Window {
 		//wave type browser
 		Fl_Browser* waveTypeBrowser;
 
-		////do pixelation
-		//Fl_Button* pixelation;
-
-		////do offset
-		//Fl_Button* offset;
-
-		////do grayscale
-		//Fl_Button* grayscale;
+		//NPR browser
+		Fl_Browser* NPRBrowser;
 
 		Fl_Button* physics; // do we want physics?
 

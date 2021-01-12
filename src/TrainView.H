@@ -23,15 +23,15 @@
 #include <chrono>
 
 
-#define SCR_WIDTH 800
-#define SCR_HEIGHT 600
+#define SCR_WIDTH 1600
+#define SCR_HEIGHT 1200
 #define NEAR 1
 #define FAR 99999.0
 #define DIVIDE_LINE 100
 #define NR_LIGHT 9
 
-const int TEXTURE_WIDTH = 1920;  // NOTE: texture size cannot be larger than
-const int TEXTURE_HEIGHT = 1080;  // the rendering window size in non-FBO mode
+const int TEXTURE_WIDTH = 1600;  // NOTE: texture size cannot be larger than
+const int TEXTURE_HEIGHT = 1200;  // the rendering window size in non-FBO mode
 
 // Preclarify for preventing the compiler error
 class TrainWindow;
@@ -203,13 +203,15 @@ class TrainView : public Fl_Gl_Window
 		void deleteSelectedObject();
 
 		//cannon system
-		const int MAX_NR_CANNON = 5;
+		const int MAX_NR_CANNON = 8;
 		const int INIT_NR_TITAN = 30;
 		bool initCannon = true;
 		bool initTitan = true;
 		bool playing = false;
 		bool win = false;
 		bool lose = false;
+		bool shakeEffect = false;
+		float shakeTime = 0;
 		vector<Titan> all_titans;
 		vector<Titan> my_titans;
 		vector<Cannon> all_cannons;
@@ -244,12 +246,15 @@ class TrainView : public Fl_Gl_Window
 		void updata_camera();
 
 		//OpenAL
+		bool initOpenAL = true;
 		glm::vec3 source_pos;
 		glm::vec3 listener_pos;
 		ALCdevice* device	= nullptr;
 		ALCcontext* context = nullptr;
-		ALuint source;
-		ALuint buffer;
+		ALuint BGMSoundSource;
+		ALuint BGMSoundBuffer;
+		ALuint cannonSoundSource;
+		ALuint cannonSoundBuffer;
 		void initSound();
 		void updateListenerPos();
 

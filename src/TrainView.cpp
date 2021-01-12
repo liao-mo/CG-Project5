@@ -252,7 +252,7 @@ void TrainView::draw()
 		throw std::runtime_error("Could not initialize GLAD!");
 
 	// Set up the view port
-	glViewport(0,0,w(),h());
+	//glViewport(0,0,w(),h());
 	// clear the window, be sure to clear the Z-Buffer too
 	glClearColor(0,0,0,0);
 	// we need to clear out the stencil buffer since we'll use
@@ -287,28 +287,27 @@ void TrainView::draw()
 	glBindBufferRange(GL_UNIFORM_BUFFER, /*binding point*/0, this->commom_matrices->ubo, 0, this->commom_matrices->size);
 	//update current light_shader
 	update_light_shaders();
-	//drawMainFBO();
+	drawMainFBO();
 	//drawSubScreenFBO();
 
-	drawTeapot();
-	drawTrees();
-	drawTitans();
-	drawCannons();
-	draw_track();
-	draw_sleeper();
-	draw_train();
-	draw_cars();
-	updateLightSource();
-	drawLightObjects();
-	drawBrickWall();
-	drawBrickWall2();
-	//drawCyborg();
-	draw_terrain();
-	drawWater(tw->waveTypeBrowser->value());
-	drawSkyBox();
-	drawText();
+	//drawTeapot();
+	//drawTrees();
+	//drawTitans();
+	//drawCannons();
+	//draw_track();
+	//draw_sleeper();
+	//draw_train();
+	//draw_cars();
+	//updateLightSource();
+	//drawLightObjects();
+	//drawBrickWall();
+	//drawBrickWall2();
+	//draw_terrain();
+	//drawWater(tw->waveTypeBrowser->value());
+	//drawSkyBox();
+	//drawText();
 	//draw main FBO to the whole screen
-	//drawMainScreen();
+	drawMainScreen();
 	//drawSubScreen();
 	glBindVertexArray(0);
 	glUseProgram(0);
@@ -346,26 +345,7 @@ setProjection()
 		}
 		
 	}
-	// Or we use the top cam
-	else if (tw->topCam->value()) {
-		float wi, he;
-		if (aspect >= 1) {
-			wi = 110;
-			he = wi / aspect;
-		} 
-		else {
-			he = 110;
-			wi = he * aspect;
-		}
-		
-		// Set up the top camera drop mode to be orthogonal and set
-		// up proper projection matrix
-		glMatrixMode(GL_PROJECTION);
-		glOrtho(-wi, wi, -he, he, 200, -200);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		glRotatef(-90,1,0,0);
-	} 
+
 	// put code for train view projection here!	
 	else {
 		size_t i;
@@ -1401,28 +1381,38 @@ void TrainView::initFBOs() {
 }
 
 void TrainView::drawMainFBO() {
-	glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
 	// set the rendering destination to FBO
 	mainFBO->bind();
+	glEnable(GL_DEPTH_TEST); // enable depth testing (is disabled for rendering screen-space quad)
 	// clear buffer
-	glClearColor(1, 1, 1, 1);
+	glClearColor(0,0,0,0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	drawTeapot();
-
-	int waterType = tw->waveTypeBrowser->value();
-	drawWater(waterType);
-
-	glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+	drawTrees();
+	drawTitans();
+	drawCannons();
+	draw_track();
+	draw_sleeper();
+	draw_train();
+	draw_cars();
+	updateLightSource();
+	drawLightObjects();
+	drawBrickWall();
+	drawBrickWall2();
+	draw_terrain();
+	drawWater(tw->waveTypeBrowser->value());
 	drawSkyBox();
-	glDepthFunc(GL_LESS); // set depth function back to default
+	drawText();
+
+	//glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
+	//drawSkyBox();
+	//glDepthFunc(GL_LESS); // set depth function back to default
 
 	glBindVertexArray(0);
-
 	// if MSAA is on, explicitly copy multi-sample color/depth buffers to single-sample
 	// it also generates mipmaps of color texture object
 	mainFBO->update();
-
 	// back to normal window-system-provided framebuffer
 	mainFBO->unbind();
 }
@@ -1530,22 +1520,78 @@ void TrainView::updateInteractiveHeightMapFBO(int mode, glm::vec2 u_center) {
 
 void TrainView::drawMainScreen() {
 	glDisable(GL_DEPTH_TEST); // disable depth test so screen-space quad isn't discarded due to depth test.
+	// clear all relevant buffers
+	glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	mainScreen_shader->use();
-	mainScreen_shader->setFloat("vx_offset", 0.5);
+	mainScreen_shader->setFloat("vx_offset", 1.0);
 	mainScreen_shader->setFloat("rt_w", w());
 	mainScreen_shader->setFloat("rt_h", h());
 	mainScreen_shader->setFloat("pixel_w", 10.0);
 	mainScreen_shader->setFloat("pixel_h", 10.0);
-	//mainScreen_shader->setBool("doPixelation", tw->pixelation->value());
-	//mainScreen_shader->setBool("doOffset", tw->offset->value());
-	//mainScreen_shader->setBool("doGrayscale", tw->grayscale->value());
+
+	mainScreen_shader->setBool("doPixelation", 0);
+	mainScreen_shader->setBool("doOffset", 0);
+	mainScreen_shader->setBool("doGrayscale", 0);
+	mainScreen_shader->setBool("doCartoon", 0);
+	mainScreen_shader->setBool("edgeFilter", 0);
+
+	if (tw->NPRBrowser->value() == 1) {
+		mainScreen_shader->setBool("noEffect", 1);
+	}
+	else if (tw->NPRBrowser->value() == 2) {
+		mainScreen_shader->setBool("doPixelation", 1);
+	}
+	else if (tw->NPRBrowser->value() == 3) {
+		mainScreen_shader->setBool("doOffset", 1);
+	}
+	else if (tw->NPRBrowser->value() == 4) {
+		mainScreen_shader->setBool("doGrayscale", 1);
+	}
+	else if (tw->NPRBrowser->value() == 5) {
+		mainScreen_shader->setBool("doCartoon", 1);
+	}
+	else if (tw->NPRBrowser->value() == 6) {
+		float offset = 1.0f / 300.0f;
+		float offsets[9][2] = {
+			{ -offset,  offset  },  // top-left
+			{  0.0f,    offset  },  // top-center
+			{  offset,  offset  },  // top-right
+			{ -offset,  0.0f    },  // center-left
+			{  0.0f,    0.0f    },  // center-center
+			{  offset,  0.0f    },  // center - right
+			{ -offset, -offset  },  // bottom-left
+			{  0.0f,   -offset  },  // bottom-center
+			{  offset, -offset  }   // bottom-right    
+		};
+		int edge_kernel[9] = {
+		-1, -1, -1,
+		-1,  8, -1,
+		-1, -1, -1
+		};
+		glUniform2fv(glGetUniformLocation(mainScreen_shader->ID, "offsets"), 9, (float*)offsets);
+		glUniform1iv(glGetUniformLocation(mainScreen_shader->ID, "edge_kernel"), 9, edge_kernel);
+		mainScreen_shader->setBool("edgeFilter", 1);
+	}
+
+	if (shakeEffect) {
+		if (shakeTime > 0) {
+			shakeTime -= delta_t;
+		}
+		else {
+			shakeEffect = false;
+		}
+		mainScreen_shader->setBool("shake", 1);
+		mainScreen_shader->setFloat("time", shakeTime);
+	}
 	
 
 	glBindVertexArray(mainScreenVAO->vao);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, mainFBO->getColorId());
 	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glUseProgram(0);
 }
 
 void TrainView::drawSubScreen() {
@@ -1753,7 +1799,8 @@ void TrainView::match_trainU() {
 
 //initialize openAL stuff
 void TrainView::initSound() {
-	if (!this->device) {
+	if (initOpenAL) {
+		initOpenAL = false;
 		this->device = alcOpenDevice(NULL);
 		if (!this->device) {
 			//puts("ERROR::NO_AUDIO_DEVICE");
@@ -1767,28 +1814,49 @@ void TrainView::initSound() {
 		alListener3f(AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
 		alListener3f(AL_VELOCITY, 0, 0, 0);
 		alListenerfv(AL_ORIENTATION, listenerOri);
-		alGenSources((ALuint)1, &this->source);
-		alSourcef(this->source, AL_PITCH, 1);
-		alSourcef(this->source, AL_GAIN, 1.0f);
-		alSource3f(this->source, AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
-		alSource3f(this->source, AL_VELOCITY, 0, 0, 0);
-		alSourcei(this->source, AL_LOOPING, AL_TRUE);
-		alGenBuffers((ALuint)1, &this->buffer);
+
+		alGenSources((ALuint)1, &this->BGMSoundSource);
+		alSourcef(this->BGMSoundSource, AL_PITCH, 1);
+		alSourcef(this->BGMSoundSource, AL_GAIN, 1.0f);
+		alSource3f(this->BGMSoundSource, AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
+		alSource3f(this->BGMSoundSource, AL_VELOCITY, 0, 0, 0);
+		alSourcei(this->BGMSoundSource, AL_LOOPING, AL_TRUE);
+		alGenBuffers((ALuint)1, &this->BGMSoundBuffer);
 		ALsizei size, freq;
 		ALenum format;
 		ALvoid* data;
 		ALboolean loop = AL_TRUE;
 		//Material from: ThinMatrix
-		//alutLoadWAVFile((ALbyte*)"../resources/audio/YOASOBI.wav", &format, &data, &size, &freq, &loop);
-		alutLoadWAVFile((ALbyte*)"../resources/audio/none.wav", &format, &data, &size, &freq, &loop);
-		alBufferData(this->buffer, format, data, size, freq);
-		alSourcei(this->source, AL_BUFFER, this->buffer);
-		if (format == AL_FORMAT_STEREO16 || format == AL_FORMAT_STEREO8)
-			puts("TYPE::STEREO");
-		else if (format == AL_FORMAT_MONO16 || format == AL_FORMAT_MONO8)
-			puts("TYPE::MONO");
-		alSourcef(source, AL_GAIN, 0.1);
-		alSourcePlay(this->source);
+		cout << "loading bgm..." << endl;
+		alutLoadWAVFile((ALbyte*)"../resources/audio/BGM2.wav", &format, &data, &size, &freq, &loop);
+		alBufferData(this->BGMSoundBuffer, format, data, size, freq);
+		alSourcei(this->BGMSoundSource, AL_BUFFER, this->BGMSoundBuffer);
+		//if (format == AL_FORMAT_STEREO16 || format == AL_FORMAT_STEREO8)
+		//	puts("TYPE::STEREO");
+		//else if (format == AL_FORMAT_MONO16 || format == AL_FORMAT_MONO8)
+		//	puts("TYPE::MONO");
+		alSourcef(BGMSoundSource, AL_GAIN, 1.0);
+
+
+		alGenSources((ALuint)1, &this->cannonSoundSource);
+		alSourcef(this->cannonSoundSource, AL_PITCH, 1);
+		alSourcef(this->cannonSoundSource, AL_GAIN, 1.0f);
+		alSource3f(this->cannonSoundSource, AL_POSITION, source_pos.x, source_pos.y, source_pos.z);
+		alSource3f(this->cannonSoundSource, AL_VELOCITY, 0, 0, 0);
+		alSourcei(this->cannonSoundSource, AL_LOOPING, AL_FALSE);
+		alGenBuffers((ALuint)1, &this->cannonSoundBuffer);
+
+		loop = AL_FALSE;
+		//Material from: ThinMatrix
+		cout << "loading other sound effect..." << endl;
+		alutLoadWAVFile((ALbyte*)"../resources/audio/cannon.wav", &format, &data, &size, &freq, &loop);
+		alBufferData(this->cannonSoundBuffer, format, data, size, freq);
+		alSourcei(this->cannonSoundSource, AL_BUFFER, this->cannonSoundBuffer);
+		//if (format == AL_FORMAT_STEREO16 || format == AL_FORMAT_STEREO8)
+		//	puts("TYPE::STEREO");
+		//else if (format == AL_FORMAT_MONO16 || format == AL_FORMAT_MONO8)
+		//	puts("TYPE::MONO");
+		alSourcef(cannonSoundSource, AL_GAIN, 0.25);
 	}
 }
 
@@ -2281,6 +2349,7 @@ void TrainView::launchCannon() {
 	if (!(my_cannons.size() <= MAX_NR_CANNON)) {
 		return;
 	}
+	alSourcePlay(this->cannonSoundSource);
 	my_cannons.push_back(all_cannons[0]);
 	size_t i;
 	if (tw->arcLength->value() == 0) {
@@ -2305,6 +2374,9 @@ void TrainView::launchCannon() {
 	my_cannons.back().gravity = 500.0f;
 	my_cannons.back().radius = scale;
 	my_cannons.back().update_modelMatrix();
+
+	shakeEffect = true;
+	shakeTime = 0.5;
 }
 
 void TrainView::initTextRender() {
@@ -2314,15 +2386,15 @@ void TrainView::initTextRender() {
 }
 
 void TrainView::startGame() {
-	game_time = 60;
+	game_time = 180;
 	playing = true;
 	win = false;
 	lose = false;
 	reloadTitans();
 	tw->worldCam->clear();
-	tw->topCam->clear();
 	tw->trainCam->set();
 	tw->speed->value(30);
+	alSourcePlay(this->BGMSoundSource);
 }
 
 void TrainView::checkScoreAndTime() {
