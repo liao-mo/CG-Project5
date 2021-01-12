@@ -24,14 +24,14 @@
 
 
 #define SCR_WIDTH 1600
-#define SCR_HEIGHT 1200
+#define SCR_HEIGHT 990
 #define NEAR 1
 #define FAR 99999.0
 #define DIVIDE_LINE 100
 #define NR_LIGHT 9
 
 const int TEXTURE_WIDTH = 1600;  // NOTE: texture size cannot be larger than
-const int TEXTURE_HEIGHT = 1200;  // the rendering window size in non-FBO mode
+const int TEXTURE_HEIGHT = 990;  // the rendering window size in non-FBO mode
 
 // Preclarify for preventing the compiler error
 class TrainWindow;
@@ -220,7 +220,6 @@ class TrainView : public Fl_Gl_Window
 		void reloadTitans();
 		void initCannons();
 		void launchCannon();
-		void checkHitTitans();
 		void drawTitans();
 		void drawCannons();
 		void startGame();
@@ -232,6 +231,11 @@ class TrainView : public Fl_Gl_Window
 		int currentFBO = 0;
 		void loadWaterMesh();
 		void drawWater(int mode);
+
+		//sine wave flag
+		WaterMesh* flagMesh = nullptr;
+		void loadflagMesh();
+		void drawflag();
 
 		//skyBox
 		SkyBox* skyBox = nullptr;
@@ -297,4 +301,10 @@ class TrainView : public Fl_Gl_Window
 		TextRender* textRender = nullptr;
 		void initTextRender();
 		void drawText();
+
+		//wings
+		Model* my_leftWing;
+		Model* my_rightWing;
+		float wingRotateAngle = 0;
+		float dAngle = 50.0f;
 };

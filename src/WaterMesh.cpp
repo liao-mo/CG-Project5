@@ -3,20 +3,26 @@
 
 using namespace std;
 
-WaterMesh::WaterMesh(glm::vec3 pos) :
+WaterMesh::WaterMesh(int type) :
 	waveCounter(0),
 	previousTime(0),
 	currentTime(0),
-	position(pos),
-	amplitude_coefficient(1.0)
+	amplitude_coefficient(1.0),
+	type(type)
 {
-	//grid = new Model(FileSystem::getPath("resources/objects/grid/grid.obj"));
+	if (type == 0) {
+		grid = new Model("../resources/objects/grid/grid.obj");
+	}
+	else if (type == 1) {
+		grid = new Model("../resources/objects/grid/low_grid.obj");
+	}
+	//
 	//Debug: low polygons for fast loading
-	grid = new Model(FileSystem::getPath("resources/objects/grid/low_grid.obj"));
+	//grid = new Model("../resources/objects/grid/low_grid.obj");
 	sinWave_shader = new Shader("../src/shaders/water_surface.vert", "../src/shaders/water_surface.frag");
 	heightMap_shader = new Shader("../src/shaders/water_heightMap.vert", "../src/shaders/water_heightMap.frag");
 	color_uv_shader = new Shader("../src/shaders/color_uv.vert", "../src/shaders/color_uv.frag");
-
+	flagTexture = new Texture2D("../resources/textures/freedomWings.jpg");
 	initWaves();
 	loadHeightMaps();
 }
@@ -30,12 +36,15 @@ void WaterMesh::initWaves()
 		this->waves.speed[i] = 0;
 		this->waves.direction[i] = glm::vec2(1, 0);
 	}
-
-	addSineWave(10, 0.3, 5, glm::vec2(1, 1));
-	addSineWave(20, 0.4, 3, glm::vec2(1, -1));
-	addSineWave(30, 0.5, 4, glm::vec2(2, 1));
-	//addSineWave(20, 0.05, 50, glm::vec2(1, -0.5));
-	//addSineWave(60, 0.2, 10, glm::vec2(-1.5, 0));
+	if (type == 0) {
+		addSineWave(10, 0.3, 5, glm::vec2(1, 1));
+		addSineWave(20, 0.4, 3, glm::vec2(1, -1));
+		addSineWave(30, 0.5, 4, glm::vec2(2, 1));
+	}
+	else if (type == 1) {
+		addSineWave(500, 10, 50, glm::vec2(1, 1));
+		//addSineWave(250, 12, 15, glm::vec2(1, -1));
+	}
 }
 
 
@@ -73,19 +82,11 @@ void WaterMesh::draw(int mode) {
 	else if (mode == 2) {
 		drawHeightMap();
 	}
-	//else if (mode == 3) {
-	//	//interactive
-	//	drawInteractiveWave();
-	//}
-	//else if (mode == 4) {
-	//	drawColorUV();
-	//}
 }
 
 void WaterMesh::drawSineWave() {
 	sinWave_shader->use();
 	sinWave_shader->setMat4("model", modelMatrix);
-
 	sinWave_shader->setFloat("time", currentTime);
 	sinWave_shader->setInt("numWaves", waveCounter);
 
@@ -110,7 +111,7 @@ void WaterMesh::drawSineWave() {
 	}
 
 	sinWave_shader->setVec3("EyePos", eyePos);
-	sinWave_shader->setVec3("light.direction", -1.0f, -1.0f, -0.0f);
+	sinWave_shader->setVec3("light.direction", lightDir);
 	sinWave_shader->setVec3("viewPos", eyePos);
 	// light properties
 	sinWave_shader->setVec3("light.ambient", 0.1f, 0.1f, 0.1f);
@@ -119,7 +120,11 @@ void WaterMesh::drawSineWave() {
 	// material properties
 	sinWave_shader->setFloat("material.shininess", 32.0f);
 
+	sinWave_shader->setInt("type", type);
+	sinWave_shader->setInt("material.diffuse", 2);
+	flagTexture->bind(2);
 	grid->Draw(*sinWave_shader);
+	glUseProgram(0);
 }
 
 void WaterMesh::drawHeightMap() {
@@ -141,10 +146,6 @@ void WaterMesh::drawHeightMap() {
 	};
 
 	heightMap_textures[heightMap_counter]->bind(1);
-
-
-
-
 	heightMap_shader->setVec3("EyePos", eyePos);
 	heightMap_shader->setVec3("light.direction", -1.0f, -1.0f, -0.0f);
 	heightMap_shader->setVec3("viewPos", eyePos);
@@ -158,45 +159,7 @@ void WaterMesh::drawHeightMap() {
 	grid->Draw(*heightMap_shader);
 	heightMap_textures[heightMap_counter]->unbind(1);
 	heightMap_textures[heightMap_counter]->unbind(2);
-}
-
-void WaterMesh::drawInteractiveWave() {
-	heightMap_shader->use();
-	heightMap_shader->setMat4("model", modelMatrix);
-	heightMap_shader->setInt("heightMap", 1);
-	heightMap_shader->setInt("interactive", 2);
-	heightMap_shader->setFloat("amplitude", amplitude_coefficient);
-	heightMap_shader->setBool("doInteractive", true);
-
-	//check if we shoud change the heightMap after a period of time
-	if (currentTime - previousTime >= 16) {
-		if (heightMap_counter == HEIGHTMAP_NUM - 1) {
-			heightMap_counter = 0;
-		}
-		else {
-			++heightMap_counter;
-		}
-	};
-
-	heightMap_textures[heightMap_counter]->bind(1);
-
-	glActiveTexture(GL_TEXTURE0 + 2);
-	glBindTexture(GL_TEXTURE_2D, interactiveTexId);
-
-
-	heightMap_shader->setVec3("EyePos", eyePos);
-	heightMap_shader->setVec3("light.direction", -1.0f, -1.0f, -0.0f);
-	heightMap_shader->setVec3("viewPos", eyePos);
-	// light properties
-	heightMap_shader->setVec3("light.ambient", 0.1f, 0.1f, 0.1f);
-	heightMap_shader->setVec3("light.diffuse", 0.8f, 0.8f, 0.8f);
-	heightMap_shader->setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-	// material properties
-	heightMap_shader->setFloat("material.shininess", 32.0f);
-
-	grid->Draw(*heightMap_shader);
-	heightMap_textures[heightMap_counter]->unbind(1);
-	heightMap_textures[heightMap_counter]->unbind(2);
+	glUseProgram(0);
 }
 
 void WaterMesh::loadHeightMaps() {
@@ -216,10 +179,4 @@ void WaterMesh::loadHeightMaps() {
 		path = path + number + ".png";
 		heightMap_textures[i] = new Texture2D(path.c_str());
 	}
-}
-
-void WaterMesh::drawColorUV() {
-	color_uv_shader->use();
-	color_uv_shader->setMat4("model", modelMatrix);
-	grid->Draw(*color_uv_shader);
 }

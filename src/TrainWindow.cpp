@@ -16,7 +16,7 @@
 //========================================================================
 TrainWindow::
 TrainWindow(const int x, const int y) 
-	: Fl_Double_Window(x,y,1900,1210,"Train and Roller Coaster")
+	: Fl_Double_Window(x,y,1900,1000,"Train and Roller Coaster")
 //========================================================================
 {
 	// make all of the widgets
@@ -24,7 +24,7 @@ TrainWindow(const int x, const int y)
 	{
 		int pty=5;			// where the last widgets were drawn
 
-		trainView = new TrainView(5,5,1600, 1200);
+		trainView = new TrainView(5,5,1600, 990);
 		trainView->tw = this;
 		trainView->m_pTrack = &m_Track;
 		this->resizable(trainView);

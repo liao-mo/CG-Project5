@@ -1,4 +1,4 @@
-#version 330 core
+#version 430 core
 out vec4 FragColor;
 
 struct Material {
@@ -24,10 +24,16 @@ uniform vec3 viewPos;
 uniform Material material;
 uniform Light light;
 uniform samplerCube skybox;
+uniform int type;
 
 void main()
 {
-    vec3 objectColor = vec3(0.5, 0.5, 0.7);
+    vec3 objectColor = vec3(0.5, 0.5, 0.7);;
+    if(type == 0){
+        objectColor = vec3(0.5, 0.5, 0.7);
+    }else if(type == 1){
+        objectColor = texture(material.diffuse, TexCoords).rgb;
+    }
 
     // ambient
     vec3 ambient = light.ambient * objectColor;
@@ -56,7 +62,12 @@ void main()
     vec3 skyReflect = vec3(texture(skybox, REF).rgb);
     vec3 skyRefract = vec3(texture(skybox, RFRA).rgb);
     
-    vec3 result = 0.2 * light_source + 0.4 * skyReflect + 0.4 * skyRefract;
+    vec3 result;
+    if(type == 0){
+        result = 0.2 * light_source + 0.4 * skyReflect + 0.4 * skyRefract;
+    }else if(type == 1){
+        result = light_source;
+    }
 
     FragColor = vec4(result, 1.0);
 } 

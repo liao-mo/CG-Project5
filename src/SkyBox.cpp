@@ -13,12 +13,12 @@ SkyBox::SkyBox() {
 
     faces_paths = 
     {
-        FileSystem::getPath("images/skybox/right.jpg"),
-        FileSystem::getPath("images/skybox/left.jpg"),
-        FileSystem::getPath("images/skybox/top.jpg"),
-        FileSystem::getPath("images/skybox/bottom2.jpg"),
-        FileSystem::getPath("images/skybox/front.jpg"),
-        FileSystem::getPath("images/skybox/back.jpg"),
+        "../images/skybox/right.jpg",
+        "../images/skybox/left.jpg",
+        "../images/skybox/top.jpg",
+        "../images/skybox/bottom2.jpg",
+        "../images/skybox/front.jpg",
+        "../images/skybox/back.jpg",
     };
 
     faces_paths =

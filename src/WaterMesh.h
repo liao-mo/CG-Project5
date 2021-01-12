@@ -19,6 +19,8 @@ using namespace std;
 #define MAX_WAVE 8
 //we have 200 heightMap image in this case
 #define HEIGHTMAP_NUM 200
+#define WATER 0;
+#define FLAG 1;
 
 struct Wave
 {
@@ -31,12 +33,16 @@ struct Wave
 class WaterMesh
 {
 public:
-	WaterMesh(glm::vec3 position);
+	WaterMesh(int type);
 
 	//shaders
 	Shader* sinWave_shader = nullptr;
 	Shader* heightMap_shader = nullptr;
 	Shader* color_uv_shader = nullptr;
+
+	//what type
+	int type;
+	Texture2D* flagTexture;
 
 	//sine wave
 	void initWaves();
@@ -59,8 +65,6 @@ public:
 	//interactive wave
 	//color uv plane
 	unsigned int interactiveTexId;
-	void drawColorUV();
-	void drawInteractiveWave();
 
 	// mode 0: sin wave, mode 1: height map
 	void draw(int mode);
@@ -70,11 +74,11 @@ public:
 
 	float previousTime = 0;
 	float currentTime = 0;
-	glm::vec3 position;
 	glm::vec3 eyePos;
 	glm::mat4 modelMatrix;
 	glm::mat4 viewMatrix;
 	glm::mat4 projectionMatrix;
+	glm::vec3 lightDir;
 
 
 	void drawHeightMap();

@@ -207,6 +207,9 @@ int TrainView::handle(int event)
 		if (k == 'f') {
 			launchCannon();
 		}
+		if (k == 'm') {
+			cout << "camera position: " << camera.Position.x << ", " << camera.Position.y << ", " << camera.Position.z << endl;
+		}
 		break;
 
 	case 9:
@@ -233,6 +236,7 @@ void TrainView::draw()
 		loadShaders();
 		initParticleSystem();
 		loadWaterMesh();
+		loadflagMesh();
 		initTitans();
 		initCannons();
 		initTextRender();
@@ -275,10 +279,6 @@ void TrainView::draw()
 	updateListenerPos();	
 	// now draw the ground plane
 	glUseProgram(0);
-	//setupFloor();
-	//glDisable(GL_LIGHTING);
-	//drawFloor(200,10);
-	//glEnable(GL_LIGHTING);
 	setupObjects();
 	drawStuff();
 
@@ -288,27 +288,10 @@ void TrainView::draw()
 	//update current light_shader
 	update_light_shaders();
 	drawMainFBO();
-	//drawSubScreenFBO();
 
-	//drawTeapot();
-	//drawTrees();
-	//drawTitans();
-	//drawCannons();
-	//draw_track();
-	//draw_sleeper();
-	//draw_train();
-	//draw_cars();
-	//updateLightSource();
-	//drawLightObjects();
-	//drawBrickWall();
-	//drawBrickWall2();
-	//draw_terrain();
-	//drawWater(tw->waveTypeBrowser->value());
-	//drawSkyBox();
-	//drawText();
 	//draw main FBO to the whole screen
 	drawMainScreen();
-	//drawSubScreen();
+
 	glBindVertexArray(0);
 	glUseProgram(0);
 
@@ -764,6 +747,29 @@ void TrainView::draw_train() {
 
 	standard_shader->setMat4("model", model);
 	sci_fi_train->Draw(*standard_shader);
+
+	//draw its wings
+	float wing_up = 3.0f;
+	float wing_forward = 2.0f;
+	model = glm::translate(model, glm::vec3(wing_up * orient_t0_v.x, wing_up * orient_t0_v.y, wing_up * orient_t0_v.z));
+	wingRotateAngle += dAngle * 0.016;
+	if (wingRotateAngle >= 45) {
+		dAngle *= -1;
+	}
+	else if (wingRotateAngle <= -45) {
+		dAngle *= -1;
+	}
+
+	glm::mat4 leftWingModel = model;
+	leftWingModel = glm::rotate(leftWingModel, glm::radians(wingRotateAngle), glm::vec3(0, 0, 1));
+	standard_shader->setMat4("model", leftWingModel);
+	my_leftWing->Draw(*standard_shader);
+
+	glm::mat4 rightWingModel = model;
+	rightWingModel = glm::rotate(rightWingModel, glm::radians(-wingRotateAngle), glm::vec3(0, 0, 1));
+	standard_shader->setMat4("model", rightWingModel);
+	my_rightWing->Draw(*standard_shader);
+
 	glUseProgram(0);
 
 
@@ -838,33 +844,31 @@ void TrainView::drawWater(int mode) {
 	waterMesh->setEyePos(camera.Position);
 	waterMesh->setMVP(model, viewMatrix, projectionMatrix);
 	waterMesh->addTime(delta_t);
+	waterMesh->lightDir = -light_sources[4].position;
 
 	waterMesh->amplitude_coefficient = tw->waterAmplitude->value();
 	waterMesh->waveLength_coefficient = tw->waterWaveLength->value();
 	waterMesh->speed_coefficient = tw->waterSpeed->value();
 
-	//if (mode == 3) {
-	//	if (firstDraw) {
-	//		updateInteractiveHeightMapFBO(0);
-	//		updateInteractiveHeightMapFBO(0);
-	//		firstDraw = false;
-	//	}
-	//	else {
-	//		updateInteractiveHeightMapFBO(2);
-	//	}
-	//	
-	//	
-	//	if (currentFBO == 0) {
-	//		waterMesh->interactiveTexId = interactiveHeightMapFBO0->getColorId();
-	//	}
-	//	else {
-	//		waterMesh->interactiveTexId = interactiveHeightMapFBO1->getColorId();
-	//	}
-	//	mainFBO->bind();
-	//}
-
 	waterMesh->draw(mode);
-	glUseProgram(0);
+}
+
+void TrainView::drawflag() {
+	glm::mat4 model = glm::mat4(1.0);
+	model = glm::translate(model, glm::vec3(-2600, 1500, -2500));
+	model = glm::rotate(model, glm::radians(90.0f), glm::vec3(1, 0, 0));
+	model = glm::scale(model, glm::vec3(4, 4, 4));
+
+	flagMesh->setEyePos(camera.Position);
+	flagMesh->setMVP(model, viewMatrix, projectionMatrix);
+	flagMesh->addTime(delta_t);
+	flagMesh->lightDir = -light_sources[4].position;
+
+	flagMesh->amplitude_coefficient = 1;
+	flagMesh->waveLength_coefficient = 1;
+	flagMesh->speed_coefficient = 1;
+
+	flagMesh->draw(1);
 }
 
 void TrainView::drawTeapot() {
@@ -872,7 +876,7 @@ void TrainView::drawTeapot() {
 	float scale_value = 10.0;
 	// world transformation
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(100, 100, 0));
+	model = glm::translate(model, glm::vec3(-500, 0, 800));
 	model = glm::scale(model, glm::vec3(scale_value));
 	standard_shader->setMat4("model", model);
 
@@ -1181,7 +1185,14 @@ void TrainView::loadModels() {
 	}
 	if (initTree) {
 		initTree = false;
-		//loadTrees();
+		loadTrees();
+	}
+	if (!my_leftWing) {
+		cout << "loading wings..." << endl;
+		my_leftWing = new Model("../resources/objects/wings/leftWing.obj");
+	}
+	if (!my_rightWing) {
+		my_rightWing = new Model("../resources/objects/wings/rightWing.obj");
 	}
 	if (initLightObject) {
 		cout << "loading light objects..." << endl;
@@ -1245,21 +1256,29 @@ void TrainView::loadTextures() {
 
 	if (initBrickTexture) {
 		initBrickTexture = false;
-		brick_diffuseMap = loadTexture(FileSystem::getPath("resources/textures/brickwall.jpg").c_str());
-		brick_normalMap = loadTexture(FileSystem::getPath("resources/textures/brickwall_normal.jpg").c_str());
+		brick_diffuseMap = loadTexture("../resources/textures/brickwall.jpg");
+		brick_normalMap = loadTexture("../resources/textures/brickwall_normal.jpg");
 
-		brick2_diffuseMap = loadTexture(FileSystem::getPath("resources/textures/bricks2.jpg").c_str());
-		brick2_normalMap = loadTexture(FileSystem::getPath("resources/textures/bricks2_normal.jpg").c_str());
-		brick2_heightMap = loadTexture(FileSystem::getPath("resources/textures/bricks2_disp.jpg").c_str());
+		brick2_diffuseMap = loadTexture("../resources/textures/bricks2.jpg");
+		brick2_normalMap = loadTexture("../resources/textures/bricks2_normal.jpg");
+		brick2_heightMap = loadTexture("../resources/textures/bricks2_disp.jpg");
 	}
 }
 
 void TrainView::loadWaterMesh() {
 	if (!waterMesh) {
 		cout << "loading water mesh..." << endl;
-		waterMesh = new WaterMesh(glm::vec3(0.0, 20.0, 0.0));
+		waterMesh = new WaterMesh(0);
 	}
 }
+
+void TrainView::loadflagMesh() {
+	if (!flagMesh) {
+		cout << "loading flag mesh..." << endl;
+		flagMesh = new WaterMesh(1);
+	}
+}
+
 
 void TrainView::loadSkyBox() {
 	if (!skyBox) {
@@ -1402,12 +1421,9 @@ void TrainView::drawMainFBO() {
 	drawBrickWall2();
 	draw_terrain();
 	drawWater(tw->waveTypeBrowser->value());
+	drawflag();
 	drawSkyBox();
 	drawText();
-
-	//glDepthFunc(GL_LEQUAL);  // change depth function so depth test passes when values are equal to depth buffer's content
-	//drawSkyBox();
-	//glDepthFunc(GL_LESS); // set depth function back to default
 
 	glBindVertexArray(0);
 	// if MSAA is on, explicitly copy multi-sample color/depth buffers to single-sample
@@ -1950,7 +1966,7 @@ void TrainView::deleteSelectedObject() {
 }
 
 void TrainView::addTree() {
-	Base_Object temp_tree(FileSystem::getPath("resources/objects/tree2/tree2.obj"));
+	Base_Object temp_tree("../resources/objects/tree2/tree2.obj");
 	my_trees.push_back(temp_tree);
 	my_trees.back().pos = glm::vec3(0, 200, 0);
 	my_trees.back().scaleVal = glm::vec3(tw->treeSize->value(), tw->treeSize->value(), tw->treeSize->value());
@@ -2070,6 +2086,9 @@ void TrainView::initRun() {
 	if (firstRun) {
 		firstRun = false;
 		tw->runButton->set();
+		
+		now_t = now_t = glutGet(GLUT_ELAPSED_TIME);
+		old_t = now_t;
 	}
 }
 
@@ -2172,17 +2191,17 @@ void TrainView::initTrackData() {
 void TrainView::initTitans() {
 	if (initTitan) {
 		initTitan = false;
-		//cout << "loading titan1..." << endl;
-		//all_titans.push_back(Titan("../resources/objects/titan/chou/chou.obj"));
-		//cout << "loading titan2..." << endl;
-		//all_titans.push_back(Titan("../resources/objects/titan/aga/textured_output.obj"));
-		//cout << "loading titan3..." << endl;
-		//all_titans.push_back(Titan("../resources/objects/titan/tsai/tsai.obj"));
+		cout << "loading titan1..." << endl;
+		all_titans.push_back(Titan("../resources/objects/titan/chou/chou.obj"));
+		cout << "loading titan2..." << endl;
+		all_titans.push_back(Titan("../resources/objects/titan/aga/textured_output.obj"));
+		cout << "loading titan3..." << endl;
+		all_titans.push_back(Titan("../resources/objects/titan/tsai/tsai.obj"));
 
 
-		all_titans.push_back(Titan("../resources/objects/titan/fake/fake.obj"));
-		all_titans.push_back(Titan("../resources/objects/titan/fake/fake.obj"));
-		all_titans.push_back(Titan("../resources/objects/titan/fake/fake.obj"));
+		//all_titans.push_back(Titan("../resources/objects/titan/fake/fake.obj"));
+		//all_titans.push_back(Titan("../resources/objects/titan/fake/fake.obj"));
+		//all_titans.push_back(Titan("../resources/objects/titan/fake/fake.obj"));
 
 		my_titans.clear();
 		for (int i = 0; i < INIT_NR_TITAN; ++i) {

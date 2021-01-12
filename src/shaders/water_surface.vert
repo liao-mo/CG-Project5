@@ -78,6 +78,6 @@ void main()
     FragPos = vec3(model * vec4(temp_pos, 1.0));
     Normal = waveNormal(temp_pos.x,temp_pos.z);
     Normal = mat3(transpose(inverse(model))) * Normal;
-
+    TexCoords = aTexCoords;
     gl_Position = projection * view * model * vec4(temp_pos, 1.0);
 }
